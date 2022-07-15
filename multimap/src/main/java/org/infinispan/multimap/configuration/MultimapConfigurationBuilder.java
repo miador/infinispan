@@ -1,22 +1,32 @@
 package org.infinispan.multimap.configuration;
 
 import org.infinispan.commons.configuration.Builder;
-import org.infinispan.configuration.cache.Configuration;
+import org.infinispan.commons.configuration.attributes.Attribute;
+import org.infinispan.commons.configuration.attributes.AttributeSet;
 
-public class MultimapConfigurationBuilder implements Builder<Configuration> {
+public class MultimapConfigurationBuilder implements Builder<MultimapConfiguration> {
 
-    @Override
-    public Configuration create() {
-        return null;
-    }
+    private final AttributeSet attributes = MultimapConfiguration.attributeDefinitionSet();
 
     @Override
-    public Builder<?> read(Configuration template) {
-        return null;
+    public Builder<?> read(MultimapConfiguration template) {
+        this.attributes.read(template.attributes());
+        return this;
     }
 
     @Override
     public void validate() {
-        Builder.super.validate();
+        attributes.attributes().forEach(Attribute::validate);
+    }
+
+    @Override
+    public MultimapConfiguration create() {
+        //FIXME
+        return new MultimapConfiguration();
+    }
+
+    public MultimapConfigurationBuilder supportsDuplicates(boolean supportsDuplicates){
+        attributes.attribute(MultimapConfiguration.SUPPORTS_DUPLICATES).set(supportsDuplicates);
+        return this;
     }
 }

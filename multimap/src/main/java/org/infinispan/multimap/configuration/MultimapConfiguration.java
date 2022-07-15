@@ -2,37 +2,22 @@ package org.infinispan.multimap.configuration;
 
 import org.infinispan.commons.configuration.attributes.AttributeDefinition;
 import org.infinispan.commons.configuration.attributes.AttributeSet;
+import org.infinispan.configuration.cache.Configuration;
 
-public class MultimapConfiguration {
+public class MultimapConfiguration extends Configuration {
 
-    static final AttributeDefinition<String> NAME = AttributeDefinition.builder(Attribute.NAME, null, String.class)
-            .validator(value -> {
-                if (value == null) {
-                    try {
-                        throw new Exception("Missing name");
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            })
-            .immutable()
-            .build();
+    static final AttributeDefinition<Boolean> SUPPORTS_DUPLICATES = AttributeDefinition.builder(Attribute.SUPPORTS_DUPLICATES, false, Boolean.class)
+            .immutable().build();
 
     final AttributeSet attributes;
 
     MultimapConfiguration(AttributeSet attributes) {
+        // FIXME: create constructor
         this.attributes = attributes;
     }
 
-    static AttributeSet attributeDefinitionSet() {
-        return new AttributeSet(MultimapConfiguration.class, NAME);
-    }
 
-    final AttributeSet attributes() {
-        return attributes;
-    }
-
-    public String name() {
-        return attributes.attribute(NAME).get();
+    public boolean supportsDuplicates() {
+        return attributes.attribute(SUPPORTS_DUPLICATES).get();
     }
 }

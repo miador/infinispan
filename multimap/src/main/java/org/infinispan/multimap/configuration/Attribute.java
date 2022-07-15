@@ -6,8 +6,7 @@ import java.util.Map;
 public enum Attribute {
     // must be first
     UNKNOWN(null),
-    SUPPORTS_DUPLICATES("supports-duplicates"),
-    NAME("name");
+    SUPPORTS_DUPLICATES("supports-duplicates");
     private static final Map<String, Attribute> ATTRIBUTES;
 
     static {
