@@ -8,7 +8,7 @@
         <xs:attribute name="name" type="xs:ID" use="required">
             <xs:annotation>
                 <xs:documentation>
-                    Sets the clustered lock's name. It must be unique.
+                    Sets the Multimap's name. It must be unique.
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
