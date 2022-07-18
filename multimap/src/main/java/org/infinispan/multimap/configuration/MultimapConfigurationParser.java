@@ -1,10 +1,7 @@
 package org.infinispan.multimap.configuration;
 
 import org.infinispan.commons.configuration.io.ConfigurationReader;
-import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
-import org.infinispan.configuration.parsing.ConfigurationParser;
-import org.infinispan.configuration.parsing.Namespace;
-import org.infinispan.configuration.parsing.Parser;
+import org.infinispan.configuration.parsing.*;
 import org.kohsuke.MetaInfServices;
 
 import static org.infinispan.multimap.configuration.MultimapConfigurationParser.NAMESPACE;
@@ -23,12 +20,15 @@ public class MultimapConfigurationParser implements ConfigurationParser {
 
     @Override
     public Namespace[] getNamespaces() {
-        return new Namespace[0];
+        return ParseUtils.getNamespaceAnnotations(getClass());
     }
 
     private void parseMultimapAttribute(Attribute attribute, String value, MultimapConfigurationBuilder builder) {
-        if (attribute == Attribute.SUPPORTS_DUPLICATES) {
-            builder.supportsDuplicates(Boolean.parseBoolean(value));
+        switch (attribute) {
+            case NAME:
+            case SUPPORTS_DUPLICATES:
+                builder.supportsDuplicates(Boolean.parseBoolean(value));
+                break;
         }
     }
 }
