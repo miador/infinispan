@@ -2,6 +2,7 @@ package org.infinispan.multimap.api.embedded;
 
 import org.infinispan.commons.util.Experimental;
 import org.infinispan.configuration.cache.Configuration;
+import org.infinispan.multimap.configuration.MultimapConfiguration;
 
 @Experimental
 public interface MultimapCacheManager<K, V> {
@@ -15,8 +16,12 @@ public interface MultimapCacheManager<K, V> {
     * @param name          name of multimap cache whose configuration is being defined
     * @param configuration configuration overrides to use
     * @return a cloned configuration instance
+    * @deprecated since 14
     */
+   @Deprecated
    Configuration defineConfiguration(String name, Configuration configuration);
+
+   Configuration defineConfiguration(String name, MultimapConfiguration configuration);
 
    /**
     * Retrieves a named multimap cache from the system.
