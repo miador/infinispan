@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" version="1.0"
+           targetNamespace="urn:infinispan:config:multimap:14.0"
+           xmlns:tns="urn:infinispan:config:multimap:14.0"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+    <xs:complexType name="multimap">
+        <xs:attribute name="name" type="xs:ID" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Sets the Multimap's name. It must be unique.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="supports-duplicates" type="xs:boolean" default="false">
+            <xs:annotation>
+                <xs:documentation>Determines if the multimap supports duplicates in the values. True or false (default).</xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+</xs:schema>
