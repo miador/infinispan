@@ -5,7 +5,7 @@ import org.infinispan.configuration.serializer.AbstractConfigurationSerializerTe
 import org.testng.AssertJUnit;
 import org.testng.annotations.Test;
 
-@Test(testName = "persistence.remote.configuration.ConfigurationSerializerTest", groups="functional")
+@Test(testName = "persistence.remote.configuration.org.infinispan.multimap.impl.ConfigurationSerializerTest", groups="functional")
 public class ConfigurationSerializerTest extends AbstractConfigurationSerializerTest {
    @Override
    protected void compareStoreConfiguration(String name, StoreConfiguration beforeStore, StoreConfiguration afterStore) {

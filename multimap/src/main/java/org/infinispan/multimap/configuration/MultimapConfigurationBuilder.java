@@ -26,11 +26,6 @@ public class MultimapConfigurationBuilder implements Builder<MultimapConfigurati
         return this;
     }
 
-    public MultimapConfigurationBuilder name(String name) {
-        attributes.attribute(MultimapConfiguration.NAME).set(name);
-        return this;
-    }
-
     public MultimapConfigurationBuilder supportsDuplicates(boolean supportsDuplicates) {
         attributes.attribute(SUPPORTS_DUPLICATES).set(supportsDuplicates);
         return this;

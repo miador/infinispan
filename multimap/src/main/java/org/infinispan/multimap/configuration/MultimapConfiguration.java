@@ -10,6 +10,10 @@ public class MultimapConfiguration {
 
     final AttributeSet attributes;
 
+    static AttributeSet attributeDefinitionSet() {
+        return new AttributeSet(MultimapConfiguration.class, SUPPORTS_DUPLICATES);
+    }
+
     MultimapConfiguration(AttributeSet attributes) {
         this.attributes = attributes;
     }
