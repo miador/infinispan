@@ -5,9 +5,10 @@ import static org.infinispan.client.hotrod.logging.Log.HOTROD;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.infinispan.client.hotrod.configuration.Configuration;
+import org.infinispan.client.hotrod.impl.ClientTopology;
 import org.infinispan.client.hotrod.impl.protocol.Codec;
 import org.infinispan.client.hotrod.impl.transport.netty.ByteBufUtil;
 import org.infinispan.client.hotrod.impl.transport.netty.ChannelFactory;
@@ -22,13 +23,13 @@ import io.netty.channel.Channel;
  * @author Tristan Tarrant
  * @since 7.0
  */
-public class AuthMechListOperation extends HotRodOperation<List<String>> {
+public class AuthMechListOperation extends NeutralVersionHotRodOperation<List<String>> {
    private final Channel channel;
    private int mechCount = -1;
    private List<String> result;
 
-   public AuthMechListOperation(Codec codec, AtomicInteger topologyId, Configuration cfg, Channel channel, ChannelFactory channelFactory) {
-      super(AUTH_MECH_LIST_REQUEST, AUTH_MECH_LIST_RESPONSE, codec, 0, cfg, DEFAULT_CACHE_NAME_BYTES, topologyId, channelFactory);
+   public AuthMechListOperation(Codec codec, AtomicReference<ClientTopology> clientTopology, Configuration cfg, Channel channel, ChannelFactory channelFactory) {
+      super(AUTH_MECH_LIST_REQUEST, AUTH_MECH_LIST_RESPONSE, codec, 0, cfg, DEFAULT_CACHE_NAME_BYTES, clientTopology, channelFactory);
       this.channel = channel;
    }
 

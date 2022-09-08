@@ -1015,7 +1015,10 @@ public class ServerConfigurationParser implements ConfigurationParser {
                engine.enabledProtocols(reader.getListAttributeValue(i));
                break;
             case ENABLED_CIPHERSUITES:
-               engine.enabledCiphersuites(reader.getAttributeValue(i));
+               engine.enabledCiphersuitesFilter(reader.getAttributeValue(i));
+               break;
+            case ENABLED_CIPHERSUITES_TLS13:
+               engine.enabledCiphersuitesNames(reader.getAttributeValue(i));
                break;
             default:
                throw ParseUtils.unexpectedAttribute(reader, i);
@@ -1082,19 +1085,21 @@ public class ServerConfigurationParser implements ConfigurationParser {
    }
 
    private void parseTrustStore(ConfigurationReader reader, ServerConfigurationBuilder builder, TrustStoreConfigurationBuilder trustStoreBuilder) {
-      String[] attributes = ParseUtils.requireAttributes(reader, Attribute.PATH);
-      trustStoreBuilder.path(attributes[0]);
-      boolean credentialSet = false;
+      boolean credentialSet = false, pathSet = false;
       for (int i = 0; i < reader.getAttributeCount(); i++) {
          ParseUtils.requireNoNamespaceAttribute(reader, i);
          String value = reader.getAttributeValue(i);
          Attribute attribute = Attribute.forName(reader.getAttributeName(i));
          switch (attribute) {
             case PATH:
-               // Already seen
+               trustStoreBuilder.path(value);
+               pathSet = true;
                break;
             case PROVIDER:
                trustStoreBuilder.provider(value);
+               break;
+            case TYPE:
+               trustStoreBuilder.type(value);
                break;
             case RELATIVE_TO:
                trustStoreBuilder.relativeTo(value);
@@ -1116,7 +1121,7 @@ public class ServerConfigurationParser implements ConfigurationParser {
          credentialSet = true;
          element = nextElement(reader);
       }
-      if (!credentialSet) {
+      if (!credentialSet && pathSet) {
          throw Server.log.missingCredential(Element.TRUSTSTORE.toString(), Attribute.PASSWORD.toString());
       }
       if (element != null) {

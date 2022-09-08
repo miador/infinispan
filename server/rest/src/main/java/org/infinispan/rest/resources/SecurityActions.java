@@ -2,6 +2,7 @@ package org.infinispan.rest.resources;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.CompletionStage;
 
 import org.infinispan.AdvancedCache;
 import org.infinispan.configuration.cache.Configuration;
@@ -9,12 +10,15 @@ import org.infinispan.configuration.global.GlobalConfiguration;
 import org.infinispan.factories.ComponentRegistry;
 import org.infinispan.factories.GlobalComponentRegistry;
 import org.infinispan.health.Health;
+import org.infinispan.manager.ClusterExecutor;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.infinispan.persistence.manager.PersistenceManager;
 import org.infinispan.rest.InvocationHelper;
 import org.infinispan.rest.framework.RestRequest;
 import org.infinispan.security.AuthorizationPermission;
 import org.infinispan.security.Security;
+import org.infinispan.security.actions.AddCacheManagerListenerAsyncAction;
+import org.infinispan.security.actions.AddLoggerListenerAsyncAction;
 import org.infinispan.security.actions.GetCacheComponentRegistryAction;
 import org.infinispan.security.actions.GetCacheConfigurationAction;
 import org.infinispan.security.actions.GetCacheConfigurationFromManagerAction;
@@ -73,9 +77,21 @@ final class SecurityActions {
       return doPrivileged(new GetCacheComponentRegistryAction(cache));
    }
 
+   static CompletionStage<Void> addLoggerListenerAsync(EmbeddedCacheManager ecm, Object listener) {
+      return doPrivileged(new AddLoggerListenerAsyncAction(ecm, listener));
+   }
+
+   static CompletionStage<Void> addListenerAsync(EmbeddedCacheManager cacheManager, Object listener) {
+      return doPrivileged(new AddCacheManagerListenerAsyncAction(cacheManager, listener));
+   }
+
    static void checkPermission(InvocationHelper invocationHelper, RestRequest request, AuthorizationPermission permission) {
       EmbeddedCacheManager cacheManager = invocationHelper.getRestCacheManager().getInstance();
       Authorizer authorizer = getGlobalComponentRegistry(cacheManager).getComponent(Authorizer.class);
       authorizer.checkPermission(request.getSubject(), permission);
+   }
+
+   static ClusterExecutor getClusterExecutor(EmbeddedCacheManager cacheManager) {
+      return doPrivileged(cacheManager::executor);
    }
 }

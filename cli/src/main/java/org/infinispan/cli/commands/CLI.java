@@ -1,7 +1,5 @@
 package org.infinispan.cli.commands;
 
-import static org.infinispan.cli.logging.Messages.MSG;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.Reader;
@@ -9,10 +7,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
+import java.security.UnrecoverableKeyException;
 import java.util.Map;
 import java.util.Properties;
 
 import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
@@ -71,14 +75,15 @@ import org.infinispan.cli.impl.DefaultShell;
 import org.infinispan.cli.impl.ExitCodeResultHandler;
 import org.infinispan.cli.impl.KubernetesContext;
 import org.infinispan.cli.impl.SSLContextSettings;
+import org.infinispan.cli.logging.Messages;
 import org.infinispan.cli.util.ZeroSecurityHostnameVerifier;
 import org.infinispan.cli.util.ZeroSecurityTrustManager;
 import org.infinispan.commons.jdkspecific.ProcessInfo;
 import org.infinispan.commons.util.ServiceFinder;
+import org.infinispan.commons.util.SslContextFactory;
 import org.infinispan.commons.util.Util;
 import org.wildfly.security.credential.store.WildFlyElytronCredentialStoreProvider;
 import org.wildfly.security.keystore.KeyStoreUtil;
-import org.wildfly.security.provider.util.ProviderUtil;
 
 /**
  * @author Tristan Tarrant &lt;tristan@infinispan.org&gt;
@@ -140,10 +145,19 @@ public class CLI extends CliCommand {
    @Option(shortName = 's', name = "truststore-password", description = "The password for the truststore")
    String truststorePassword;
 
+   @Option(completer = FileOptionCompleter.class, shortName = 'k', name = "keystore", description = "A keystore containing a client certificate to authenticate with the server")
+   Resource keystore;
+
+   @Option(shortName = 'w', name = "keystore-password", description = "The password for the keystore")
+   String keystorePassword;
+
+   @Option(name = "provider", description = "The security provider used to create the SSL/TLS context")
+   String provider;
+
    @Option(shortName = 'v', hasValue = false, description = "Shows version information")
    boolean version;
 
-   @Option(hasValue = false, description = "Whether to trust all certificates", name = "trustall")
+   @Option(hasValue = false, description = "Whether to trust all server certificates", name = "trustall")
    boolean trustAll;
 
    @Option(completer = FileOptionCompleter.class, shortName = 'f', description = "File for batch mode")
@@ -198,23 +212,11 @@ public class CLI extends CliCommand {
          }
       }
 
-      String sslTrustStore = truststore != null ? truststore.getAbsolutePath() : context.getProperty(Context.Property.TRUSTSTORE);
-      if (sslTrustStore != null) {
-         String sslTrustStorePassword = truststorePassword != null ? truststorePassword : context.getProperty(Context.Property.TRUSTSTORE_PASSWORD);
-         try (FileInputStream f = new FileInputStream(sslTrustStore)) {
-            KeyStore keyStore = KeyStoreUtil.loadKeyStore(ProviderUtil.INSTALLED_PROVIDERS, null, f, sslTrustStore, sslTrustStorePassword != null ? sslTrustStorePassword.toCharArray() : null);
-            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            trustManagerFactory.init(keyStore);
-            HostnameVerifier verifier = hostnameVerifier != null ? new RegexHostnameVerifier(hostnameVerifier) : null;
-            SSLContextSettings sslContext = SSLContextSettings.getInstance("TLS", null, trustManagerFactory.getTrustManagers(), null, verifier);
-            context.setSslContext(sslContext);
-         } catch (Exception e) {
-            invocation.getShell().writeln(MSG.keyStoreError(sslTrustStore, e));
-            return CommandResult.FAILURE;
-         }
-      } else if (trustAll || Boolean.parseBoolean(context.getProperty(Context.Property.TRUSTALL))) {
-         SSLContextSettings sslContext = SSLContextSettings.getInstance("TLS", null, new TrustManager[]{new ZeroSecurityTrustManager()}, null, new ZeroSecurityHostnameVerifier());
-         context.setSslContext(sslContext);
+      try {
+         configureSslContext(context, truststore, truststorePassword, keystore, keystorePassword, provider, hostnameVerifier, trustAll);
+      } catch (Exception e) {
+         invocation.getShell().writeln(Messages.MSG.keyStoreError(e));
+         return CommandResult.FAILURE;
       }
 
       String connectionString = connect != null ? connect : context.getProperty(Context.Property.AUTOCONNECT_URL);
@@ -230,6 +232,39 @@ public class CLI extends CliCommand {
             batch(context.getProperty(Context.Property.AUTOEXEC), invocation.getShell());
          }
          return interactive(invocation.getShell());
+      }
+   }
+
+   public static void configureSslContext(Context context, Resource truststore, String truststorePassword, Resource keystore, String keystorePassword, String providerName, String hostnameVerifier, boolean trustAll) throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, IOException {
+      Provider[] providers = SslContextFactory.discoverSecurityProviders(CLI.class.getClassLoader());
+      providerName = providerName != null ? providerName : context.getProperty(Context.Property.PROVIDER);
+      String sslKeyStore = keystore != null ? keystore.getAbsolutePath() : context.getProperty(Context.Property.KEYSTORE);
+      KeyManager[] keyManagers = null;
+      if (sslKeyStore != null) {
+         String sslKeyStorePassword = keystorePassword != null ? keystorePassword : context.getProperty(Context.Property.KEYSTORE_PASSWORD);
+         try (FileInputStream f = new FileInputStream(sslKeyStore)) {
+            KeyStore ks = KeyStoreUtil.loadKeyStore(() -> providers, providerName, f, sslKeyStore, sslKeyStorePassword != null ? sslKeyStorePassword.toCharArray() : null);
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            keyManagerFactory.init(ks, sslKeyStorePassword != null ? sslKeyStorePassword.toCharArray() : null);
+            keyManagers = keyManagerFactory.getKeyManagers();
+         }
+      }
+      String sslTrustStore = truststore != null ? truststore.getAbsolutePath() : context.getProperty(Context.Property.TRUSTSTORE);
+
+      if (sslTrustStore != null) {
+         TrustManagerFactory trustManagerFactory;
+         String sslTrustStorePassword = truststorePassword != null ? truststorePassword : context.getProperty(Context.Property.TRUSTSTORE_PASSWORD);
+         try (FileInputStream f = new FileInputStream(sslTrustStore)) {
+            KeyStore ts = KeyStoreUtil.loadKeyStore(() -> providers, providerName, f, sslTrustStore, sslTrustStorePassword != null ? sslTrustStorePassword.toCharArray() : null);
+            trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            trustManagerFactory.init(ts);
+         }
+         HostnameVerifier verifier = hostnameVerifier != null ? new RegexHostnameVerifier(hostnameVerifier) : null;
+         SSLContextSettings sslContext = SSLContextSettings.getInstance("TLS", keyManagers, trustManagerFactory.getTrustManagers(), null, verifier);
+         context.setSslContext(sslContext);
+      } else if (trustAll || Boolean.parseBoolean(context.getProperty(Context.Property.TRUSTALL))) {
+         SSLContextSettings sslContext = SSLContextSettings.getInstance("TLS", keyManagers, new TrustManager[]{new ZeroSecurityTrustManager()}, null, new ZeroSecurityHostnameVerifier());
+         context.setSslContext(sslContext);
       }
    }
 

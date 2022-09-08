@@ -14,6 +14,7 @@ import javax.security.auth.Subject;
 
 import org.infinispan.AdvancedCache;
 import org.infinispan.Cache;
+import org.infinispan.commons.CacheException;
 import org.infinispan.commons.logging.LogFactory;
 import org.infinispan.commons.util.Version;
 import org.infinispan.server.core.logging.Log;
@@ -22,6 +23,7 @@ import org.infinispan.util.concurrent.CompletionStages;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.CharsetUtil;
 
@@ -53,27 +55,13 @@ public class Resp3Handler implements RespRequestHandler {
                break;
             }
             if (arguments.size() == 4) {
-               performAuth(arguments.get(2), arguments.get(3)).whenComplete((subject, t) -> {
-                  if (t == null) {
-                     cache = cache.withSubject(subject);
-                     helloResponse(ctx);
-                  } else {
-                     handleThrowable(ctx, t);
-                  }
-               });
+               performAuth(ctx, arguments.get(2), arguments.get(3));
             } else {
                helloResponse(ctx);
             }
             break;
          case "AUTH":
-            performAuth(arguments.get(0), arguments.get(1)).whenComplete((subject, t) -> {
-               if (t == null) {
-                  cache = cache.withSubject(subject);
-                  ctx.writeAndFlush(statusOK());
-               } else {
-                  handleThrowable(ctx, t);
-               }
-            });
+            performAuth(ctx, arguments.get(0), arguments.get(1));
             break;
          case "PING":
             if (arguments.size() == 0) {
@@ -235,11 +223,23 @@ public class Resp3Handler implements RespRequestHandler {
             break;
          case "INCR":
             counterIncOrDec(cache, arguments.get(0), true)
-                  .thenAccept(longValue -> handleLongResult(ctx, longValue));
+                  .whenComplete((longValue, t) -> {
+                     if (t != null) {
+                        handleThrowable(ctx, t);
+                     } else {
+                        handleLongResult(ctx, longValue);
+                     }
+                  });
             break;
          case "DECR":
             counterIncOrDec(cache, arguments.get(0), false)
-                  .thenAccept(longValue -> handleLongResult(ctx, longValue));
+                  .whenComplete((longValue, t) -> {
+                     if (t != null) {
+                        handleThrowable(ctx, t);
+                     } else {
+                        handleLongResult(ctx, longValue);
+                     }
+                  });
             break;
          case "INFO":
             ctx.writeAndFlush(RespRequestHandler.stringToByteBuf("-ERR not implemented yet\r\n", ctx.alloc()));
@@ -270,10 +270,56 @@ public class Resp3Handler implements RespRequestHandler {
             // TODO: need to close connection
             ctx.flush();
             break;
+         case "COMMAND":
+            if (!arguments.isEmpty()) {
+               ctx.writeAndFlush(RespRequestHandler.stringToByteBuf("-ERR COMMAND does not currently support arguments\r\n", ctx.alloc()));
+               break;
+            }
+            StringBuilder commandBuilder = new StringBuilder();
+            commandBuilder.append("*20\r\n");
+            addCommand(commandBuilder, "HELLO", -1, 0, 0, 0);
+            addCommand(commandBuilder, "AUTH", -2, 0, 0, 0);
+            addCommand(commandBuilder, "PING", -2, 0, 0, 0);
+            addCommand(commandBuilder, "ECHO", 2, 0, 0, 0);
+            addCommand(commandBuilder, "GET", 2, 1, 1, 1);
+            addCommand(commandBuilder, "SET", -3, 1, 1, 1);
+            addCommand(commandBuilder, "DEL", -2, 1, -1, 1);
+            addCommand(commandBuilder, "MGET", -2, 1, -1, 1);
+            addCommand(commandBuilder, "MSET", -3, 1, 1, 2);
+            addCommand(commandBuilder, "INCR", 2, 1, 1, 1);
+            addCommand(commandBuilder, "DECR", 2, 1, 1, 1);
+            addCommand(commandBuilder, "INFO", -1, 0, 0, 0);
+            addCommand(commandBuilder, "PUBLISH", 3, 0, 0, 0);
+            addCommand(commandBuilder, "SUBSCRIBE", -2, 0, 0, 0);
+            addCommand(commandBuilder, "SELECT", -1, 0, 0, 0);
+            addCommand(commandBuilder, "READWRITE", 1, 0, 0, 0);
+            addCommand(commandBuilder, "READONLY", 1, 0, 0, 0);
+            addCommand(commandBuilder, "RESET", 1, 0, 0, 0);
+            addCommand(commandBuilder, "QUIT", 1, 0, 0, 0);
+            addCommand(commandBuilder, "COMMAND", -1, 0, 0, 0);
+            ctx.writeAndFlush(RespRequestHandler.stringToByteBuf(commandBuilder.toString(), ctx.alloc()));
+            break;
          default:
             return RespRequestHandler.super.handleRequest(ctx, type, arguments);
       }
       return this;
+   }
+
+   private static void addCommand(StringBuilder builder, String name, int arity, int firstKeyPos, int lastKeyPos, int steps) {
+      builder.append("*6\r\n");
+      // Name
+      builder.append("$").append(ByteBufUtil.utf8Bytes(name)).append("\r\n").append(name).append("\r\n");
+      // Arity
+      builder.append(":").append(arity).append("\r\n");
+      // Flags
+      builder.append("*0\r\n");
+      // First key
+      builder.append(":").append(firstKeyPos).append("\r\n");
+      // Second key
+      builder.append(":").append(lastKeyPos).append("\r\n");
+      // Step
+      builder.append(":").append(steps).append("\r\n");
+
    }
 
    private static void handleLongResult(ChannelHandlerContext ctx, Long result) {
@@ -289,7 +335,12 @@ public class Resp3Handler implements RespRequestHandler {
             .thenCompose(currentValueBytes -> {
                if (currentValueBytes != null) {
                   String prevValue = new String(currentValueBytes, CharsetUtil.UTF_8);
-                  long prevIntValue = Long.parseLong(prevValue) + (increment ? 1 : -1);
+                  long prevIntValue;
+                  try {
+                     prevIntValue = Long.parseLong(prevValue) + (increment ? 1 : -1);
+                  } catch (NumberFormatException e) {
+                     throw new CacheException("value is not an integer or out of range");
+                  }
                   String newValueString = String.valueOf(prevIntValue);
                   byte[] newValueBytes = newValueString.getBytes(CharsetUtil.UTF_8);
                   return cache.replaceAsync(key, currentValueBytes, newValueBytes)
@@ -325,12 +376,29 @@ public class Resp3Handler implements RespRequestHandler {
             });
    }
 
-   private CompletionStage<Subject> performAuth(byte[] username, byte[] password) {
-      return respServer.getConfiguration().authentication().authenticator()
-            .authenticate(
-                  new String(username, StandardCharsets.UTF_8),
-                  new String(password, StandardCharsets.UTF_8).toCharArray()
-            );
+   private void performAuth(ChannelHandlerContext ctx, byte[] username, byte[] password) {
+      Authenticator authenticator = respServer.getConfiguration().authentication().authenticator();
+      if (authenticator == null) {
+         handleAuthResponse(ctx, null, null);
+         return;
+      }
+      authenticator.authenticate(
+            new String(username, StandardCharsets.UTF_8),
+            new String(password, StandardCharsets.UTF_8).toCharArray()
+      ).whenComplete((subject, t) -> handleAuthResponse(ctx, subject, t));
+   }
+
+   private void handleAuthResponse(ChannelHandlerContext ctx, Subject subject, Throwable t) {
+      if (t == null) {
+         if (subject != null) {
+            cache = cache.withSubject(subject);
+            ctx.writeAndFlush(statusOK());
+         } else {
+            ctx.writeAndFlush(ctx.writeAndFlush(RespRequestHandler.stringToByteBuf("-ERR Client sent AUTH, but no password is set" + "\r\n", ctx.alloc())));
+         }
+      } else {
+         handleThrowable(ctx, t);
+      }
    }
 
    private static void helloResponse(ChannelHandlerContext ctx) {

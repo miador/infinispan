@@ -4,7 +4,7 @@
    <!-- jgroups.udp.address is deprecated and will be removed, see ISPN-11867 -->
    <UDP bind_addr="${jgroups.bind.address,jgroups.udp.address:SITE_LOCAL}"
         bind_port="${jgroups.bind.port,jgroups.udp.port:0}"
-        mcast_addr="${jgroups.mcast_addr:228.6.7.8}"
+        mcast_addr="${jgroups.mcast_addr:239.6.7.8}"
         mcast_port="${jgroups.mcast_port:46655}"
         tos="0"
         ucast_send_buf_size="1m"
@@ -13,9 +13,9 @@
         mcast_recv_buf_size="25m"
         ip_ttl="${jgroups.ip_ttl:2}"
         thread_naming_pattern="pl"
-        diag.enabled="false"
+        diag.enabled="${jgroups.diag.enabled:false}"
         bundler_type="transfer-queue"
-        bundler.max_size="8500"
+        bundler.max_size="${jgroups.bundler.max_size:64000}"
 
         thread_pool.min_threads="${jgroups.thread_pool.min_threads:0}"
         thread_pool.max_threads="${jgroups.thread_pool.max_threads:200}"
@@ -57,5 +57,5 @@
    <MFC max_credits="4m"
         min_threshold="0.40"
    />
-   <FRAG4 frag_size="8000"/>
+   <FRAG4 frag_size="${jgroups.frag_size:60000}"/>
 </config>

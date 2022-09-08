@@ -20,6 +20,8 @@ import static org.infinispan.rest.resources.MediaTypeUtils.negotiateMediaType;
 import static org.infinispan.rest.resources.ResourceUtil.addEntityAsJson;
 import static org.infinispan.rest.resources.ResourceUtil.asJsonResponseFuture;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.reactivex.rxjava3.core.Flowable;
 import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
 import java.security.PrivilegedAction;
@@ -39,6 +41,7 @@ import org.infinispan.commons.dataconversion.MediaType;
 import org.infinispan.commons.dataconversion.internal.Json;
 import org.infinispan.commons.dataconversion.internal.JsonSerialization;
 import org.infinispan.commons.io.StringBuilderWriter;
+import org.infinispan.commons.util.concurrent.CompletableFutures;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.configuration.global.GlobalConfiguration;
@@ -72,10 +75,10 @@ import org.infinispan.security.Security;
 import org.infinispan.server.core.BackupManager;
 import org.infinispan.server.core.ServerStateManager;
 import org.infinispan.topology.LocalTopologyManager;
-import org.infinispan.commons.util.concurrent.CompletableFutures;
-
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.reactivex.rxjava3.core.Flowable;
+import org.infinispan.util.logging.annotation.impl.Logged;
+import org.infinispan.util.logging.events.EventLog;
+import org.infinispan.util.logging.events.EventLogCategory;
+import org.infinispan.util.logging.events.EventLogSerializer;
 
 /**
  * REST resource to manage the cache container.
@@ -124,6 +127,10 @@ public class ContainerResource implements ResourceHandler {
             // Container configuration listener
             .invocation().methods(GET).path("/v2/container/config").withAction("listen")
                .permission(AuthorizationPermission.ADMIN).auditContext(AuditContext.SERVER).handleWith(this::listenConfig)
+
+            // Container lifecycle listener
+            .invocation().method(GET).path("/v2/container").withAction("listen")
+               .permission(AuthorizationPermission.ADMIN).auditContext(AuditContext.SERVER).handleWith(this::listenLifecycle)
 
             // Cache Manager info
             .invocation().methods(GET).path("/v2/cache-managers/{name}").handleWith(this::getInfo)
@@ -533,19 +540,41 @@ public class ContainerResource implements ResourceHandler {
    }
 
    private CompletionStage<RestResponse> listenConfig(RestRequest request) {
+      return streamConfigurationAndEvents(request, false);
+   }
+
+   private CompletionStage<RestResponse> listenLifecycle(RestRequest request) {
+      return streamConfigurationAndEvents(request, true);
+   }
+
+   private CompletionStage<RestResponse> streamConfigurationAndEvents(RestRequest request, boolean includeLifecycle) {
       MediaType mediaType = negotiateMediaType(request, APPLICATION_YAML, APPLICATION_JSON, APPLICATION_XML);
       boolean includeCurrentState = Boolean.parseBoolean(request.getParameter("includeCurrentState"));
       EmbeddedCacheManager cacheManager = invocationHelper.getRestCacheManager().getInstance();
       NettyRestResponse.Builder responseBuilder = new NettyRestResponse.Builder();
       ConfigurationListener listener = new ConfigurationListener(cacheManager, mediaType, includeCurrentState);
       responseBuilder.contentType(TEXT_EVENT_STREAM).entity(listener.getEventStream());
-      return cacheManager.addListenerAsync(listener).thenApply(v -> responseBuilder.build());
+
+      CompletionStage<?> cs = SecurityActions.addListenerAsync(cacheManager, listener);
+      if (includeLifecycle) {
+         cs = cs.thenCompose(ignore -> SecurityActions.addLoggerListenerAsync(cacheManager, listener));
+      }
+
+      return cs.thenApply(v -> responseBuilder.build());
    }
 
    private String serializeConfig(Configuration cacheConfiguration, String name, MediaType mediaType) {
       StringWriter sw = new StringWriter();
       try (ConfigurationWriter writer = ConfigurationWriter.to(sw).withType(mediaType).build()) {
          parserRegistry.serialize(writer, null, Collections.singletonMap(name, cacheConfiguration));
+      }
+      return sw.toString();
+   }
+
+   private String serializeEvent(EventLog event, MediaType mediaType) {
+      StringWriter sw = new StringWriter();
+      try (ConfigurationWriter writer = ConfigurationWriter.to(sw).withType(mediaType).build()) {
+         parserRegistry.serializeWith(writer, new EventLogSerializer(), event);
       }
       return sw.toString();
    }
@@ -563,7 +592,7 @@ public class ContainerResource implements ResourceHandler {
                includeCurrentState ?
                      (stream) -> {
                         for (String configName : cacheManager.getCacheConfigurationNames()) {
-                           Configuration config = cacheManager.getCacheConfiguration(configName);
+                           Configuration config = SecurityActions.getCacheConfigurationFromManager(cacheManager, configName);
                            String eventType = config.isTemplate() ? "create-template" : "create-cache";
                            stream.sendEvent(new ServerSentEvent(eventType, serializeConfig(config, configName, mediaType)));
                         }
@@ -578,6 +607,14 @@ public class ContainerResource implements ResourceHandler {
          return eventStream;
       }
 
+      @Logged
+      public CompletionStage<Void> onDataLogged(EventLog event) {
+         if (event.getCategory() != EventLogCategory.LIFECYCLE) return CompletableFutures.completedNull();
+
+         final ServerSentEvent sse = new ServerSentEvent("lifecycle-event", serializeEvent(event, mediaType));
+         return eventStream.sendEvent(sse);
+      }
+
       @ConfigurationChanged
       public CompletionStage<Void> onConfigurationEvent(ConfigurationChangedEvent event) {
          String eventType = event.getConfigurationEventType().toString().toLowerCase() + "-" + event.getConfigurationEntityType();
@@ -588,7 +625,7 @@ public class ContainerResource implements ResourceHandler {
             switch (event.getConfigurationEntityType()) {
                case "cache":
                case "template":
-                     Configuration config = cacheManager.getCacheConfiguration(event.getConfigurationEntityName());
+                     Configuration config = SecurityActions.getCacheConfigurationFromManager(cacheManager, event.getConfigurationEntityName());
                      sse = new ServerSentEvent(eventType, serializeConfig(config, event.getConfigurationEntityName(), mediaType));
                   break;
                default:

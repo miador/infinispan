@@ -71,16 +71,14 @@
       </notifiers>
    </ciManagement>
    <distributionManagement>
-      <repository>
-         <id>${jboss.releases.repo.id}</id>
-         <name>JBoss Release Repository</name>
-         <url>${jboss.releases.repo.url}</url>
-      </repository>
       <snapshotRepository>
-         <id>${jboss.snapshots.repo.id}</id>
-         <name>JBoss Snapshot Repository</name>
-         <url>${jboss.snapshots.repo.url}</url>
+         <id>${maven.snapshots.repo.id}</id>
+         <url>${maven.snapshots.repo.url}</url>
       </snapshotRepository>
+      <repository>
+         <id>${maven.releases.repo.id}</id>
+         <url>${maven.releases.repo.url}</url>
+      </repository>
    </distributionManagement>
 
    <properties>
@@ -100,15 +98,16 @@
       <infinispan.olm.openshift.source>community-operators</infinispan.olm.openshift.source>
       <infinispan.olm.k8s.source>operatorhubio-catalog</infinispan.olm.k8s.source>
       <infinispan.olm.name>infinispan</infinispan.olm.name>
+      <infinispan.gpg.key>9E31AB27445478DB</infinispan.gpg.key>
       <wildfly.brand.name>WildFly</wildfly.brand.name>
       <wildfly.brand.prefix>wildfly</wildfly.brand.prefix>
 
-      <!-- jboss repository urls -->
-      <jboss.releases.repo.id>jboss-releases-repository</jboss.releases.repo.id>
-      <jboss.releases.nexus.url>https://repository.jboss.org/nexus</jboss.releases.nexus.url>
-      <jboss.releases.repo.url>${jboss.releases.nexus.url}/service/local/staging/deploy/maven2/</jboss.releases.repo.url>
-      <jboss.snapshots.repo.id>jboss-snapshots-repository</jboss.snapshots.repo.id>
-      <jboss.snapshots.repo.url>${jboss.releases.nexus.url}/content/repositories/snapshots/</jboss.snapshots.repo.url>
+      <!-- maven repository urls -->
+      <maven.releases.nexus.url>https://s01.oss.sonatype.org/</maven.releases.nexus.url>
+      <maven.releases.repo.id>ossrh</maven.releases.repo.id>
+      <maven.releases.repo.url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</maven.releases.repo.url>
+      <maven.snapshots.repo.id>ossrh</maven.snapshots.repo.id>
+      <maven.snapshots.repo.url>https://s01.oss.sonatype.org/content/repositories/snapshots</maven.snapshots.repo.url>
 
       <!-- === Application Server Configuration === -->
 
@@ -121,17 +120,19 @@
       <jdk.min.version>11</jdk.min.version>
 
       <!-- Dependency versions -->
+      <version.aesh>2.6</version.aesh>
+      <version.aesh-readline>2.3</version.aesh-readline>
       <version.ant>1.10.7</version.ant>
       <version.ant-nodeps>1.8.1</version.ant-nodeps>
       <version.ant-contrib>1.0b3</version.ant-contrib>
       <version.antlr3>3.5.2</version.antlr3>
       <version.arquillian>1.6.0.Final</version.arquillian>
       <version.blockhound>1.0.6.RELEASE</version.blockhound>
-      <version.bouncycastle>1.69</version.bouncycastle>
+      <version.bouncycastle>1.70</version.bouncycastle>
       <version.byteman>4.0.9</version.byteman>
-      <version.caffeine>3.1.0</version.caffeine>
+      <version.caffeine>3.1.1</version.caffeine>
       <version.commons.compress>1.21</version.commons.compress>
-      <version.console>14.0.0.Dev04</version.console>
+      <version.console>14.0.0.CR1</version.console>
       <version.fabric8.kubernetes-client>5.12.2</version.fabric8.kubernetes-client>
       <version.glassfish.jaxb>2.3.1</version.glassfish.jaxb>
       <version.glassfish.json>1.1.4</version.glassfish.json>
@@ -144,17 +145,17 @@
       <version.infinispan.arquillian>1.2.0.Beta3</version.infinispan.arquillian>
       <version.infinispan.doclets>1.4.0.Final</version.infinispan.doclets>
       <version.infinispan.maven-plugins>1.0.2.Final</version.infinispan.maven-plugins>
-      <version.io.agroal>1.12</version.io.agroal>
-      <version.io.lettuce>6.1.6.RELEASE</version.io.lettuce>
+      <version.io.agroal>1.16</version.io.agroal>
+      <version.io.lettuce>6.2.0.RELEASE</version.io.lettuce>
       <version.io.mashona>1.0.0</version.io.mashona>
-      <version.jackson>2.13.2</version.jackson>
-      <version.jackson.databind>2.13.2.2</version.jackson.databind>
+      <version.jackson>2.13.3</version.jackson>
+      <version.jackson.databind>2.13.3</version.jackson.databind>
       <version.jacoco>0.8.7</version.jacoco>
       <version.jakarta.transaction>1.3.3</version.jakarta.transaction>
       <version.jakarta.enterprise.cdi>2.0.2</version.jakarta.enterprise.cdi>
       <version.jakarta.persistence>2.2.3</version.jakarta.persistence>
       <version.javax.cache>1.1.0</version.javax.cache>
-      <version.jboss.logging>3.4.3.Final</version.jboss.logging>
+      <version.jboss.logging>3.5.0.Final</version.jboss.logging>
       <version.jboss.marshalling>2.0.12.Final</version.jboss.marshalling>
       <version.jboss.naming>5.0.6.CR1</version.jboss.naming>
       <version.jboss.narayana>5.12.0.Final</version.jboss.narayana>
@@ -163,42 +164,44 @@
       <version.jboss.shrinkwrap.descriptors>2.0.0</version.jboss.shrinkwrap.descriptors>
       <version.jboss.shrinkwrap.resolver>3.1.3</version.jboss.shrinkwrap.resolver>
       <version.jcip-annotations>1.0</version.jcip-annotations>
-      <version.jgroups>5.2.2.Final</version.jgroups>
-      <version.jgroups.raft>1.0.8.Final</version.jgroups.raft>
+      <version.jgroups>5.2.6.Final</version.jgroups>
+      <version.jgroups.raft>1.0.10.Final</version.jgroups.raft>
       <version.jsr107>1.1.0</version.jsr107>
       <version.junit>4.13.2</version.junit>
       <version.junit5>5.8.2</version.junit5>
-      <version.log4j>2.17.2</version.log4j>
+      <version.log4j>2.18.0</version.log4j>
       <version.lucene>8.11.1</version.lucene>
       <version.metainf-services>1.8</version.metainf-services>
       <version.mockito>4.3.1</version.mockito>
       <version.mockito_dep.bytebuddy>1.9.7</version.mockito_dep.bytebuddy>
       <version.mockito_dep.objenesis>2.6</version.mockito_dep.objenesis>
-      <version.nashorn>15.3</version.nashorn>
-      <version.netty>4.1.78.Final</version.netty>
+      <version.nashorn>15.4</version.nashorn>
+      <version.netty>4.1.80.Final</version.netty>
       <version.netty.incubator.iouring>0.0.14.Final</version.netty.incubator.iouring>
       <version.okhttp>3.14.9</version.okhttp>
       <version.openjdk.jmh>1.23</version.openjdk.jmh>
       <version.org.wildfly.arquillian>3.0.1.Final</version.org.wildfly.arquillian>
       <version.org.wildfly.core>16.0.1.Final</version.org.wildfly.core>
-      <version.org.wildfly.elytron>1.19.0.Final</version.org.wildfly.elytron>
-      <version.org.wildfly.openssl>2.2.0.Final</version.org.wildfly.openssl>
-      <version.org.wildfly.openssl.natives>2.2.0.Final</version.org.wildfly.openssl.natives>
-      <version.org.wildfly.openssl.natives.linux_x86_64>2.2.0.SP01</version.org.wildfly.openssl.natives.linux_x86_64>
+      <version.org.wildfly.elytron>1.20.1.Final</version.org.wildfly.elytron>
+      <version.org.wildfly.openssl>2.2.5.Final</version.org.wildfly.openssl>
+      <version.org.wildfly.openssl.natives>2.2.2.SP01</version.org.wildfly.openssl.natives>
+      <version.org.wildfly.openssl.natives.linux_x86_64>2.2.2.SP01</version.org.wildfly.openssl.natives.linux_x86_64>
+      <version.org.wildfly.openssl.natives.macos_x86_64>2.2.2.Final</version.org.wildfly.openssl.natives.macos_x86_64>
+      <version.org.wildfly.openssl.natives.windows_x86_64>2.2.2.Final</version.org.wildfly.openssl.natives.windows_x86_64>
       <version.ow2.asm>9.3</version.ow2.asm>
       <version.picketbox>5.0.3.Final</version.picketbox>
       <version.picketlink>2.5.5.SP12</version.picketlink>
-      <version.protostream>4.5.0.Dev02</version.protostream>
+      <version.protostream>4.5.0.CR1</version.protostream>
       <version.protostuff>1.6.2</version.protostuff>
       <version.reactivestreams>1.0.3</version.reactivestreams>
       <version.rocksdb>7.1.2</version.rocksdb>
       <version.rxjava>3.1.3</version.rxjava>
-      <version.micrometer>1.8.3</version.micrometer>
+      <version.micrometer>1.9.2</version.micrometer>
 
       <!-- these versions must be kept in sync with ${version.micrometer}: -->
-      <version.io.prometheus>0.12.0</version.io.prometheus>
+      <version.io.prometheus>0.15.0</version.io.prometheus>
       <version.hdrhistogram>2.1.12</version.hdrhistogram>
-      <version.latencyutils>2.0.2</version.latencyutils>
+      <version.latencyutils>2.0.3</version.latencyutils>
 
       <version.opentelemetry>1.15.0</version.opentelemetry>
       <version.opentelemetry.sdk-autoconfigure>1.15.0-alpha</version.opentelemetry.sdk-autoconfigure>
@@ -218,6 +221,7 @@
       <version.maven.antrun>3.0.0</version.maven.antrun>
       <version.maven.buildhelper>3.1.0</version.maven.buildhelper>
       <version.maven.bundle>4.2.1</version.maven.bundle>
+      <version.maven.gpg>3.0.1</version.maven.gpg>
       <version.maven-compiler-plugin>3.10.1</version.maven-compiler-plugin>
       <version.maven.invoker>3.2.1</version.maven.invoker>
       <version.maven.jar>3.2.0</version.maven.jar>
@@ -231,7 +235,7 @@
       <version.maven.surefire>3.0.0-M6</version.maven.surefire>
       <version.org.jboss.galleon>4.2.8.Final</version.org.jboss.galleon>
       <version.org.wildfly.galleon-plugins>5.2.1.Final</version.org.wildfly.galleon-plugins>
-      <version.sonatype.nexus-staging-plugin>1.6.12</version.sonatype.nexus-staging-plugin>
+      <version.sonatype.nexus-staging-plugin>1.6.13</version.sonatype.nexus-staging-plugin>
       <!-- overwrite version in jboss-parent -->
       <version.pmd.plugin>3.16.0</version.pmd.plugin>
       <version.owasp-dependency-check-plugin>7.1.0</version.owasp-dependency-check-plugin>
@@ -259,11 +263,72 @@
                <artifactId>dependency-check-maven</artifactId>
                <version>${version.owasp-dependency-check-plugin}</version>
             </plugin>
+            <plugin>
+               <groupId>org.sonatype.plugins</groupId>
+               <artifactId>nexus-staging-maven-plugin</artifactId>
+               <version>${version.sonatype.nexus-staging-plugin}</version>
+               <configuration>
+                  <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                  <stagingDescription>${infinispan.brand.name} ${project.version} release</stagingDescription>
+                  <nexusUrl>${maven.releases.nexus.url}</nexusUrl>
+                  <serverId>${maven.releases.repo.id}</serverId>
+               </configuration>
+            </plugin>
+            <plugin>
+               <groupId>org.apache.maven.plugins</groupId>
+               <artifactId>maven-javadoc-plugin</artifactId>
+               <version>${version.maven.javadoc}</version>
+               <executions>
+                  <execution>
+                     <id>javadoc</id>
+                     <phase>package</phase>
+                     <goals>
+                        <goal>jar</goal>
+                     </goals>
+                  </execution>
+               </executions>
+            </plugin>
+            <plugin>
+               <groupId>org.apache.maven.plugins</groupId>
+               <artifactId>maven-gpg-plugin</artifactId>
+               <version>${version.maven.gpg}</version>
+               <executions>
+                  <execution>
+                     <id>sign-artifacts</id>
+                     <phase>verify</phase>
+                     <goals>
+                        <goal>sign</goal>
+                     </goals>
+                     <configuration>
+                        <keyname>${infinispan.gpg.key}</keyname>
+                        <passphraseServerId>${infinispan.gpg.key}</passphraseServerId>
+                     </configuration>
+                  </execution>
+               </executions>
+            </plugin>
          </plugins>
       </pluginManagement>
    </build>
 
    <profiles>
+      <profile>
+         <id>community-release</id>
+         <activation>
+            <activeByDefault>false</activeByDefault>
+         </activation>
+         <build>
+            <plugins>
+               <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-gpg-plugin</artifactId>
+               </plugin>
+               <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-javadoc-plugin</artifactId>
+               </plugin>
+            </plugins>
+         </build>
+      </profile>
 
       <profile>
          <!-- nexus-staging-maven-plugin blocks maven-deploy-plugin -->
@@ -276,14 +341,7 @@
                <plugin>
                   <groupId>org.sonatype.plugins</groupId>
                   <artifactId>nexus-staging-maven-plugin</artifactId>
-                  <version>${version.sonatype.nexus-staging-plugin}</version>
-                  <configuration>
-                     <autoReleaseAfterClose>true</autoReleaseAfterClose>
-                     <nexusUrl>${jboss.releases.nexus.url}</nexusUrl>
-                     <serverId>${jboss.releases.repo.id}</serverId>
-                     <stagingProfileId>2161b7b8da0080</stagingProfileId>
-                     <stagingRepositoryId>${stagingRepositoryId}</stagingRepositoryId>
-                  </configuration>
+                  <extensions>false</extensions>
                </plugin>
             </plugins>
          </build>

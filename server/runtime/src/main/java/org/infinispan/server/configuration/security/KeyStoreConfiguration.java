@@ -1,7 +1,7 @@
 package org.infinispan.server.configuration.security;
 
 import static org.infinispan.server.configuration.security.CredentialStoresConfiguration.resolvePassword;
-import static org.wildfly.security.provider.util.ProviderUtil.INSTALLED_PROVIDERS;
+import static org.infinispan.server.security.KeyStoreUtils.buildFilelessKeyStore;
 import static org.wildfly.security.provider.util.ProviderUtil.findProvider;
 
 import java.io.File;
@@ -61,15 +61,19 @@ public class KeyStoreConfiguration extends ConfigurationElement<KeyStoreConfigur
 
    public void build(SSLContextBuilder builder, Properties properties, EnumSet<ServerSecurityRealm.Feature> features) {
       if (attributes.isModified()) {
+         Provider[] providers = SecurityActions.discoverSecurityProviders(Thread.currentThread().getContextClassLoader());
          try {
             final KeyStore keyStore;
+            String providerName = attributes.attribute(PROVIDER).get();
+            String type = attributes.attribute(TYPE).get();
             if (attributes.attribute(PATH).isNull()) {
-               keyStore = buildFilelessKeyStore();
+               keyStore = buildFilelessKeyStore(providers, providerName, type);
             } else {
-               keyStore = buildKeyStore(properties);
+               keyStore = buildKeyStore(providers, properties);
             }
-            String provider = attributes.attribute(PROVIDER).get();
-            KeyManagerFactory keyManagerFactory = provider != null ? KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm(), provider) : KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            String algorithm = KeyManagerFactory.getDefaultAlgorithm();
+            Provider provider = findProvider(providers, providerName, KeyManagerFactory.class, algorithm);
+            KeyManagerFactory keyManagerFactory = provider != null ? KeyManagerFactory.getInstance(algorithm, provider) : KeyManagerFactory.getInstance(algorithm);
             char[] keyStorePassword = resolvePassword(attributes.attribute(KEYSTORE_PASSWORD));
             char[] keyPassword = resolvePassword(attributes.attribute(KEY_PASSWORD));
             keyManagerFactory.init(keyStore, keyPassword != null ? keyPassword : keyStorePassword);
@@ -87,7 +91,7 @@ public class KeyStoreConfiguration extends ConfigurationElement<KeyStoreConfigur
       }
    }
 
-   private KeyStore buildKeyStore(Properties properties) throws GeneralSecurityException, IOException {
+   private KeyStore buildKeyStore(Provider[] providers, Properties properties) throws GeneralSecurityException, IOException {
       String keyStoreFileName = ParseUtils.resolvePath(attributes.attribute(PATH).get(),
             properties.getProperty(attributes.attribute(RELATIVE_TO).get()));
       String generateSelfSignedHost = attributes.attribute(GENERATE_SELF_SIGNED_CERTIFICATE_HOST).get();
@@ -99,22 +103,13 @@ public class KeyStoreConfiguration extends ConfigurationElement<KeyStoreConfigur
          KeyStoreUtils.generateSelfSignedCertificate(keyStoreFileName, provider, keyStorePassword,
                keyPassword, keyAlias, generateSelfSignedHost);
       }
-      KeyStore keyStore = KeyStoreUtil.loadKeyStore(INSTALLED_PROVIDERS, provider, new FileInputStream(keyStoreFileName), keyStoreFileName, keyStorePassword);
+      KeyStore keyStore = KeyStoreUtil.loadKeyStore(() -> providers, provider, new FileInputStream(keyStoreFileName), keyStoreFileName, keyStorePassword);
       if (keyAlias != null) {
          if (!keyStore.containsAlias(keyAlias)) {
             throw Server.log.aliasNotInKeystore(keyAlias, keyStoreFileName);
          }
          keyStore = FilteringKeyStore.filteringKeyStore(keyStore, AliasFilter.fromString(keyAlias));
       }
-      return keyStore;
-   }
-
-   private KeyStore buildFilelessKeyStore() throws GeneralSecurityException, IOException {
-      String type = attributes.attribute(TYPE).get();
-      Provider provider = findProvider(INSTALLED_PROVIDERS, attributes.attribute(PROVIDER).get(), KeyStore.class, type);
-
-      KeyStore keyStore = KeyStore.getInstance(type, provider);
-      keyStore.load(null, null);
       return keyStore;
    }
 }

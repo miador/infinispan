@@ -40,6 +40,7 @@ import org.infinispan.commons.util.Version;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.global.GlobalConfiguration;
 import org.infinispan.configuration.serializing.ConfigurationHolder;
+import org.infinispan.configuration.serializing.ConfigurationSerializer;
 import org.infinispan.configuration.serializing.CoreConfigurationSerializer;
 
 /**
@@ -202,25 +203,36 @@ public class ParserRegistry implements NamespaceMappingParser {
    public void parseElement(ConfigurationReader reader, ConfigurationBuilderHolder holder) {
       String namespace = reader.getNamespace();
       String name = reader.getLocalName();
-      NamespaceParserPair parser = findNamespaceParser(namespace, name);
+      NamespaceParserPair parser = findNamespaceParser(reader, namespace, name);
       ConfigurationSchemaVersion oldSchema = reader.getSchema();
       reader.setSchema(Schema.fromNamespaceURI(namespace));
       parser.parser.readElement(reader, holder);
       reader.setSchema(oldSchema);
    }
 
+   private NamespaceParserPair parseCacheName(ConfigurationReader reader, String name, String namespace) {
+      if (reader.hasNext()) {
+         reader.nextElement();
+      }
+      // If there's an invalid cache type element, then it's not a cache name and an invalid cache definition
+      if (!Element.isCacheElement(reader.getLocalName()))
+         throw CONFIG.unsupportedConfiguration(name, namespace, Version.getVersion());
+      reader.setAttributeValue("", "name", name);
+      return findNamespaceParser(reader, reader.getNamespace(), reader.getLocalName());
+   }
+
    @Override
    public void parseAttribute(ConfigurationReader reader, int i, ConfigurationBuilderHolder holder) throws ConfigurationReaderException {
       String namespace = reader.getAttributeNamespace(i);
       String name = reader.getLocalName();
-      NamespaceParserPair parser = findNamespaceParser(namespace, name);
+      NamespaceParserPair parser = findNamespaceParser(reader, namespace, name);
       ConfigurationSchemaVersion oldSchema = reader.getSchema();
       reader.setSchema(Schema.fromNamespaceURI(namespace));
       parser.parser.readAttribute(reader, name, i, holder);
       reader.setSchema(oldSchema);
    }
 
-   private NamespaceParserPair findNamespaceParser(String namespace, String name) {
+   private NamespaceParserPair findNamespaceParser(ConfigurationReader reader, String namespace, String name) {
       NamespaceParserPair parser = parserMappings.get(new QName(namespace, name));
       if (parser == null) {
          // Next we strip off the version from the URI and look for a wildcard match
@@ -229,7 +241,8 @@ public class ParserRegistry implements NamespaceMappingParser {
          parser = parserMappings.get(new QName(baseUri, name));
          // See if we can get a default parser instead
          if (parser == null || !isSupportedNamespaceVersion(parser.namespace, namespace.substring(lastColon + 1)))
-            throw CONFIG.unsupportedConfiguration(name, namespace, Version.getVersion());
+            // Parse a possible cache name because the cache name has not a namespace definition in YAML/JSON
+            return parseCacheName(reader, name, namespace);
       }
       return parser;
    }
@@ -271,9 +284,12 @@ public class ParserRegistry implements NamespaceMappingParser {
     * @param configurations a map of named configurations
     */
    public void serialize(ConfigurationWriter writer, GlobalConfiguration globalConfiguration, Map<String, Configuration> configurations) {
+      serializeWith(writer, new CoreConfigurationSerializer(), new ConfigurationHolder(globalConfiguration, configurations));
+   }
+
+   public <T> void serializeWith(ConfigurationWriter writer, ConfigurationSerializer<T> serializer, T t) {
       writer.writeStartDocument();
-      CoreConfigurationSerializer serializer = new CoreConfigurationSerializer();
-      serializer.serialize(writer, new ConfigurationHolder(globalConfiguration, configurations));
+      serializer.serialize(writer, t);
       writer.writeEndDocument();
    }
 
@@ -321,7 +337,7 @@ public class ParserRegistry implements NamespaceMappingParser {
    public void serialize(ConfigurationWriter writer, String name, Configuration configuration) {
       writer.writeStartDocument();
       CoreConfigurationSerializer serializer = new CoreConfigurationSerializer();
-      serializer.writeCache(writer, name, configuration, true);
+      serializer.writeCache(writer, name, configuration);
       writer.writeEndDocument();
    }
 

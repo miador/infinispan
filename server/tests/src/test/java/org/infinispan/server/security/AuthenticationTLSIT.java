@@ -9,10 +9,10 @@ import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
 import org.infinispan.client.hotrod.exceptions.HotRodClientException;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.server.test.core.Common;
+import org.infinispan.server.test.core.category.Security;
 import org.infinispan.server.test.junit4.InfinispanServerRule;
 import org.infinispan.server.test.junit4.InfinispanServerRuleBuilder;
 import org.infinispan.server.test.junit4.InfinispanServerTestMethodRule;
-import org.infinispan.server.test.core.category.Security;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,7 +51,7 @@ public class AuthenticationTLSIT {
    @Test
    public void testReadWrite() {
       ConfigurationBuilder builder = new ConfigurationBuilder();
-      SERVERS.getServerDriver().applyTrustStore(builder, "ca");
+      SERVERS.getServerDriver().applyTrustStore(builder, "ca.pfx");
       if (!mechanism.isEmpty()) {
          builder.security().authentication()
                .saslMechanism(mechanism)

@@ -67,18 +67,6 @@
          </notifier>
       </notifiers>
    </ciManagement>
-   <distributionManagement>
-      <repository>
-         <id>${jboss.releases.repo.id}</id>
-         <name>JBoss Release Repository</name>
-         <url>${jboss.releases.repo.url}</url>
-      </repository>
-      <snapshotRepository>
-         <id>${jboss.snapshots.repo.id}</id>
-         <name>JBoss Snapshot Repository</name>
-         <url>${jboss.snapshots.repo.url}</url>
-      </snapshotRepository>
-   </distributionManagement>
    <modules>
       <module>build/configuration</module>
       <module>build/bom</module>
@@ -250,8 +238,8 @@
 
       <!-- dependencies version -->
       <versionx.ant-contrib.ant-contrib>${version.ant-contrib}</versionx.ant-contrib.ant-contrib>
-      <versionx.com.amazonaws>1.12.228</versionx.com.amazonaws>
-      <versionx.com.bouncycastle>${version.bouncycastle}</versionx.com.bouncycastle>
+      <versionx.com.amazonaws>1.12.261</versionx.com.amazonaws>
+      <versionx.org.bouncycastle>${version.bouncycastle}</versionx.org.bouncycastle>
       <versionx.com.clearspring.analytics.stream>2.2.0</versionx.com.clearspring.analytics.stream>
       <versionx.com.esotericsoftware.kryo>4.0.2</versionx.com.esotericsoftware.kryo>
       <versionx.com.fasterxml.jackson.core.jackson-annotations>${version.jackson}</versionx.com.fasterxml.jackson.core.jackson-annotations>
@@ -267,7 +255,7 @@
       <versionx.com.microsoft.azure.azure-storage>8.6.5</versionx.com.microsoft.azure.azure-storage>
       <versionx.com.microsoft.sqlserver>9.4.0.jre11</versionx.com.microsoft.sqlserver>
       <versionx.com.mysqldatabase.mysql>8.0.28</versionx.com.mysqldatabase.mysql>
-      <versionx.com.postgresqldatabase.postgresql>42.3.3</versionx.com.postgresqldatabase.postgresql>
+      <versionx.com.postgresqldatabase.postgresql>42.4.1</versionx.com.postgresqldatabase.postgresql>
       <versionx.com.oracle.ojdbc.ojdbc8>19.3.0.0</versionx.com.oracle.ojdbc.ojdbc8>
       <versionx.com.squareup.okhttp3.ohhttp>${version.okhttp}</versionx.com.squareup.okhttp3.ohhttp>
       <versionx.com.thoughtworks.xstream.xstream>${version.xstream}</versionx.com.thoughtworks.xstream.xstream>
@@ -302,7 +290,8 @@
       <versionx.junit.junit5>${version.junit5}</versionx.junit.junit5>
       <versionx.mysql.mysql-connector-java>8.0.28</versionx.mysql.mysql-connector-java>
       <versionx.net.spy.spymemcached>2.12.1</versionx.net.spy.spymemcached>
-      <versionx.org.aesh.aesh>2.6</versionx.org.aesh.aesh>
+      <versionx.org.aesh.aesh>${version.aesh}</versionx.org.aesh.aesh>
+      <versionx.org.aesh.readline>${version.aesh-readline}</versionx.org.aesh.readline>
       <versionx.org.antlr.antlr-runtime>3.5.2</versionx.org.antlr.antlr-runtime>
       <versionx.org.apache.ant.ant>${version.ant}</versionx.org.apache.ant.ant>
       <versionx.org.apache.avro.avro>1.9.1</versionx.org.apache.avro.avro>
@@ -379,16 +368,16 @@
       <versionx.org.jgroups.jgroups>${version.jgroups}</versionx.org.jgroups.jgroups>
       <versionx.org.jgroups.jgroups-raft>${version.jgroups.raft}</versionx.org.jgroups.jgroups-raft>
       <versionx.org.jgroups.kubernetes.jgroups-kubernetes>2.0.1.Final</versionx.org.jgroups.kubernetes.jgroups-kubernetes>
-      <versionx.org.jsoup>1.14.2</versionx.org.jsoup>
+      <versionx.org.jsoup>1.15.3</versionx.org.jsoup>
       <versionx.org.kohsuke.metainf-services.metainf-services>${version.metainf-services}</versionx.org.kohsuke.metainf-services.metainf-services>
-      <versionx.org.latencyutils.LatencyUtils>2.0.2</versionx.org.latencyutils.LatencyUtils>
+      <versionx.org.latencyutils.LatencyUtils>${version.latencyutils}</versionx.org.latencyutils.LatencyUtils>
       <versionx.org.mariadb.jdbc>2.7.3</versionx.org.mariadb.jdbc>
       <versionx.org.mockito.mockito-core>${version.mockito}</versionx.org.mockito.mockito-core>
       <versionx.org.objectweb.howl.howl>1.0.1-1</versionx.org.objectweb.howl.howl>
       <versionx.org.openjdk.jmh.jmh-core>${version.openjdk.jmh}</versionx.org.openjdk.jmh.jmh-core>
       <versionx.org.openjdk.jmh.jmh-generator-annprocess>${version.openjdk.jmh}</versionx.org.openjdk.jmh.jmh-generator-annprocess>
       <versionx.org.openjdk.nashorn>${version.nashorn}</versionx.org.openjdk.nashorn>
-      <versionx.org.postgresql>42.3.3</versionx.org.postgresql>
+      <versionx.org.postgresql>42.4.1</versionx.org.postgresql>
       <versionx.org.picketlink.picketlink-api>${version.picketlink}</versionx.org.picketlink.picketlink-api>
       <versionx.org.reactivestreams.reactive-streams>${version.reactivestreams}</versionx.org.reactivestreams.reactive-streams>
       <versionx.org.rocksdb.rocksdbjni>${version.rocksdb}</versionx.org.rocksdb.rocksdbjni>
@@ -419,9 +408,8 @@
       <versionx.org.wildfly.maven.plugins.licenses-plugin>2.3.0.Final</versionx.org.wildfly.maven.plugins.licenses-plugin>
       <versionx.org.wildfly.openssl.natives>${version.org.wildfly.openssl.natives}</versionx.org.wildfly.openssl.natives>
       <versionx.org.wildfly.openssl.wildfly-openssl-linux-x86_64>${version.org.wildfly.openssl.natives.linux_x86_64}</versionx.org.wildfly.openssl.wildfly-openssl-linux-x86_64>
-      <versionx.org.wildfly.openssl.wildfly-openssl-linux-x86_64>${version.org.wildfly.openssl.natives.linux_x86_64}</versionx.org.wildfly.openssl.wildfly-openssl-linux-x86_64>
-      <versionx.org.wildfly.openssl.wildfly-openssl-macosx-x86_64>${versionx.org.wildfly.openssl.natives}</versionx.org.wildfly.openssl.wildfly-openssl-macosx-x86_64>
-      <versionx.org.wildfly.openssl.wildfly-openssl-windows-x86_64>${versionx.org.wildfly.openssl.natives}</versionx.org.wildfly.openssl.wildfly-openssl-windows-x86_64>
+      <versionx.org.wildfly.openssl.wildfly-openssl-macosx-x86_64>${version.org.wildfly.openssl.natives.macos_x86_64}</versionx.org.wildfly.openssl.wildfly-openssl-macosx-x86_64>
+      <versionx.org.wildfly.openssl.wildfly-openssl-windows-x86_64>${version.org.wildfly.openssl.natives.windows_x86_64}</versionx.org.wildfly.openssl.wildfly-openssl-windows-x86_64>
       <versionx.org.wildfly.security.wildfly-elytron>${version.org.wildfly.elytron}</versionx.org.wildfly.security.wildfly-elytron>
       <versionx.org.xerial>3.36.0.1</versionx.org.xerial>
       <versionx.org.yaml.snakeyaml>1.28</versionx.org.yaml.snakeyaml>
@@ -470,12 +458,12 @@
          <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk15to18</artifactId>
-            <version>${versionx.com.bouncycastle}</version>
+            <version>${versionx.org.bouncycastle}</version>
          </dependency>
          <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk15on</artifactId>
-            <version>${versionx.com.bouncycastle}</version>
+            <version>${versionx.org.bouncycastle}</version>
          </dependency>
          <dependency>
             <groupId>com.clearspring.analytics</groupId>
@@ -895,6 +883,11 @@
             <groupId>org.aesh</groupId>
             <artifactId>aesh</artifactId>
             <version>${versionx.org.aesh.aesh}</version>
+         </dependency>
+         <dependency>
+            <groupId>org.aesh</groupId>
+            <artifactId>readline</artifactId>
+            <version>${versionx.org.aesh.readline}</version>
          </dependency>
          <dependency>
             <groupId>org.antlr</groupId>
@@ -2026,11 +2019,6 @@
          <artifactId>jboss-logging-processor</artifactId>
       </dependency>
       <dependency>
-         <groupId>javax.annotation</groupId>
-         <artifactId>javax.annotation-api</artifactId>
-         <scope>provided</scope>
-      </dependency>
-      <dependency>
          <groupId>org.jacoco</groupId>
          <artifactId>org.jacoco.agent</artifactId>
          <classifier>runtime</classifier>
@@ -2115,8 +2103,9 @@
                <version>2.8.1</version>
             </plugin>
             <plugin>
+               <groupId>org.apache.maven.plugins</groupId>
                <artifactId>maven-scm-plugin</artifactId>
-               <version>1.9.5</version>
+               <version>1.13.0</version>
                <configuration>
                   <tag>${project.version}</tag>
                </configuration>
@@ -2128,19 +2117,6 @@
                <configuration>
                   <generateBackupPoms>false</generateBackupPoms>
                   <processAllModules>true</processAllModules>
-               </configuration>
-            </plugin>
-            <plugin>
-               <groupId>org.sonatype.plugins</groupId>
-               <artifactId>nexus-staging-maven-plugin</artifactId>
-               <version>${version.sonatype.nexus-staging-plugin}</version>
-               <configuration>
-                  <autoReleaseAfterClose>true</autoReleaseAfterClose>
-                  <stagingDescription>${infinispan.brand.name} ${project.version} release</stagingDescription>
-                  <nexusUrl>${jboss.releases.nexus.url}</nexusUrl>
-                  <serverId>${jboss.releases.repo.id}</serverId>
-                  <stagingProfileId>2161b7b8da0080</stagingProfileId>
-                  <stagingRepositoryId>${stagingRepositoryId}</stagingRepositoryId>
                </configuration>
             </plugin>
             <plugin>
@@ -2642,23 +2618,6 @@
    </reporting>
 
    <profiles>
-      <profile>
-         <!-- nexus-staging-maven-plugin blocks maven-deploy-plugin -->
-         <id>nexus-staging</id>
-         <activation>
-            <property><name>!skipNexusStaging</name></property>
-         </activation>
-         <build>
-            <plugins>
-               <plugin>
-                  <groupId>org.sonatype.plugins</groupId>
-                  <artifactId>nexus-staging-maven-plugin</artifactId>
-                  <extensions>true</extensions>
-               </plugin>
-            </plugins>
-         </build>
-      </profile>
-
       <profile>
          <id>m2e</id>
          <activation>

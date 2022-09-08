@@ -35,6 +35,9 @@ Sets the value of a specific property. If you do not specify a value, the proper
 *config get* 'name'::
 Retrieves the value of a specific property.
 
+*config reset*::
+Resets all properties to their default values.
+
 *config convert* --format=[xml|json|yaml] [-o outputFile] [inputFile]::
 Converts a configuration file to a different format.
 
@@ -76,7 +79,14 @@ Specifies whether to trust all server certificates. Values are `false` (default)
 Defines the path to a keystore that contains a certificate chain that verifies server identity.
 
 *truststore-password*::
+Specifies a password to access the truststore.
+
+*keystore*::
+Defines a path to the keystore, which contains a certificate. The certificate identifies the client. Use the `keystore` property when the server requires client certificate authentication.
+
+*keystore-password*::
 Specifies a password to access the keystore.
+
 
 
 EXAMPLES

@@ -17,6 +17,7 @@ import javax.security.auth.Subject;
 import org.infinispan.AdvancedCache;
 import org.infinispan.Cache;
 import org.infinispan.commons.dataconversion.MediaType;
+import org.infinispan.commons.util.concurrent.CompletableFutures;
 import org.infinispan.container.entries.CacheEntry;
 import org.infinispan.context.Flag;
 import org.infinispan.distribution.DistributionManager;
@@ -35,6 +36,8 @@ import org.infinispan.rest.distribution.CacheDistributionInfo;
 import org.infinispan.rest.distribution.CacheDistributionRunnable;
 import org.infinispan.rest.framework.RestRequest;
 import org.infinispan.rest.logging.Log;
+import org.infinispan.security.AuthorizationManager;
+import org.infinispan.security.AuthorizationPermission;
 import org.infinispan.security.Security;
 import org.infinispan.security.impl.Authorizer;
 import org.infinispan.server.core.CacheInfo;
@@ -209,28 +212,30 @@ public class RestCacheManager<V> {
    }
 
    public CompletionStage<Collection<CacheDistributionInfo>> cacheDistribution(String cacheName, RestRequest request) {
-      DistributionManager dm = SecurityActions.getDistributionManager(getCache(cacheName, request));
+      AdvancedCache<?, ?> ac = getCache(cacheName, request);
+      checkCachePermission(ac, request.getSubject(), AuthorizationPermission.MONITOR);
+      DistributionManager dm = SecurityActions.getDistributionManager(ac);
       if (dm == null) {
          CacheDistributionInfo local = CacheDistributionInfo.resolve(instance.getCache(cacheName).getAdvancedCache());
          return CompletableFuture.completedStage(Collections.singletonList(local));
       }
 
-      CompletableFuture<Collection<CacheDistributionInfo>> future = new CompletableFuture<>();
       Map<Address, CacheDistributionInfo> distributions = new ConcurrentHashMap<>();
-      ClusterExecutor executor = instance.executor();
+      ClusterExecutor executor = SecurityActions.getClusterExecutor(instance);
       Collection<Address> members = dm.getCacheTopology().getMembers();
-      executor.filterTargets(members).submitConsumer(new CacheDistributionRunnable(cacheName), (address, info, t) -> {
+      return executor.filterTargets(members).submitConsumer(new CacheDistributionRunnable(cacheName), (address, info, t) -> {
          if (t != null) {
-            future.completeExceptionally(t);
-            return;
+            throw CompletableFutures.asCompletionException(t);
          }
-
          distributions.putIfAbsent(address, info);
-         if (distributions.size() == members.size() && !future.isCompletedExceptionally()) {
-            future.complete(distributions.values());
-         }
-      });
-      return future;
+      }).thenApply(ignore -> distributions.values());
+   }
+
+   private void checkCachePermission(AdvancedCache<?, ?> ac, Subject subject, AuthorizationPermission permission) {
+      AuthorizationManager am = SecurityActions.getCacheAuthorizationManager(ac);
+      if (am != null) {
+         am.checkPermission(subject, permission);
+      }
    }
 
    @Listener
