@@ -29,10 +29,7 @@
            max_interval="30000"
    />
    <FD_SOCK2 offset="${jgroups.fd.port-offset:50000}"/>
-   <!-- Suspect node `timeout` millis after the last heartbeat -->
-   <FD_ALL3 timeout="10000"
-            interval="2000"
-   />
+   <FD_ALL3/>
    <VERIFY_SUSPECT2 timeout="1000"/>
    <pbcast.NAKACK2 xmit_interval="100"
                    xmit_table_num_rows="50"
@@ -51,10 +48,10 @@
    <pbcast.GMS print_local_addr="false"
                join_timeout="${jgroups.join_timeout:2000}"
    />
-   <UFC max_credits="4m"
+   <UFC max_credits="${jgroups.max_credits:4m}"
         min_threshold="0.40"
    />
-   <MFC max_credits="4m"
+   <MFC max_credits="${jgroups.max_credits:4m}"
         min_threshold="0.40"
    />
    <FRAG4 frag_size="${jgroups.frag_size:60000}"/>

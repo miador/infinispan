@@ -6,6 +6,7 @@ import static org.infinispan.client.rest.RestResponse.FORBIDDEN;
 import static org.infinispan.client.rest.RestResponse.NOT_MODIFIED;
 import static org.infinispan.client.rest.RestResponse.NO_CONTENT;
 import static org.infinispan.client.rest.RestResponse.OK;
+import static org.infinispan.client.rest.RestResponse.TEMPORARY_REDIRECT;
 import static org.infinispan.configuration.cache.IndexStorage.LOCAL_HEAP;
 import static org.infinispan.server.test.core.Common.assertStatus;
 import static org.infinispan.server.test.core.Common.awaitStatus;
@@ -23,6 +24,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -43,7 +45,9 @@ import org.infinispan.client.rest.RestCacheManagerClient;
 import org.infinispan.client.rest.RestClient;
 import org.infinispan.client.rest.RestClusterClient;
 import org.infinispan.client.rest.RestResponse;
+import org.infinispan.client.rest.configuration.RestClientConfiguration;
 import org.infinispan.client.rest.configuration.RestClientConfigurationBuilder;
+import org.infinispan.commons.dataconversion.internal.Json;
 import org.infinispan.commons.marshall.ProtoStreamMarshaller;
 import org.infinispan.commons.test.Exceptions;
 import org.infinispan.commons.test.skip.SkipJunit;
@@ -51,6 +55,7 @@ import org.infinispan.commons.util.Util;
 import org.infinispan.configuration.cache.AuthorizationConfigurationBuilder;
 import org.infinispan.configuration.cache.CacheMode;
 import org.infinispan.configuration.cache.XSiteStateTransferMode;
+import org.infinispan.jboss.marshalling.commons.GenericJBossMarshaller;
 import org.infinispan.protostream.sampledomain.User;
 import org.infinispan.protostream.sampledomain.marshallers.MarshallerRegistration;
 import org.infinispan.query.dsl.Query;
@@ -59,8 +64,10 @@ import org.infinispan.query.remote.client.ProtobufMetadataManagerConstants;
 import org.infinispan.rest.resources.WeakSSEListener;
 import org.infinispan.server.functional.HotRodCacheQueries;
 import org.infinispan.server.test.api.TestUser;
+import org.infinispan.server.test.core.ContainerInfinispanServerDriver;
 import org.infinispan.server.test.junit4.InfinispanServerRule;
 import org.infinispan.server.test.junit4.InfinispanServerTestMethodRule;
+import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
 
@@ -137,7 +144,7 @@ public abstract class AbstractAuthorization {
       }
 
       // Types with no access.
-      for (TestUser type: EnumSet.complementOf(EnumSet.of(TestUser.ANONYMOUS, TestUser.ADMIN, TestUser.MONITOR))) {
+      for (TestUser type : EnumSet.complementOf(EnumSet.of(TestUser.ANONYMOUS, TestUser.ADMIN, TestUser.MONITOR))) {
          RestCacheClient cache = getServerTest().rest().withClientConfiguration(restBuilders.get(type)).get().cache(getServerTest().getMethodName());
          assertStatus(FORBIDDEN, cache.distribution());
       }
@@ -153,7 +160,7 @@ public abstract class AbstractAuthorization {
       }
 
       // Types with no access.
-      for (TestUser type: EnumSet.complementOf(EnumSet.of(TestUser.ANONYMOUS, TestUser.ADMIN, TestUser.MONITOR))) {
+      for (TestUser type : EnumSet.complementOf(EnumSet.of(TestUser.ANONYMOUS, TestUser.ADMIN, TestUser.MONITOR))) {
          RestCacheClient cache = getServerTest().rest().withClientConfiguration(restBuilders.get(type)).get().cache(getServerTest().getMethodName());
          assertStatus(FORBIDDEN, cache.stats());
       }
@@ -226,7 +233,7 @@ public abstract class AbstractAuthorization {
       for (TestUser user : EnumSet.of(TestUser.MONITOR, TestUser.APPLICATION, TestUser.OBSERVER, TestUser.WRITER)) {
          RemoteCacheManager remoteCacheManager = serverTest.hotrod().withClientConfiguration(hotRodBuilders.get(user)).createRemoteCacheManager();
          Exceptions.expectException(HotRodClientException.class, "(?s).*ISPN000287.*",
-                 () -> serverTest.addScript(remoteCacheManager, "scripts/test.js")
+               () -> serverTest.addScript(remoteCacheManager, "scripts/test.js")
          );
       }
    }
@@ -249,10 +256,61 @@ public abstract class AbstractAuthorization {
       for (TestUser user : EnumSet.of(TestUser.MONITOR, TestUser.OBSERVER, TestUser.WRITER)) {
          RemoteCache cacheExec = serverTest.hotrod().withClientConfiguration(hotRodBuilders.get(user)).get();
          Exceptions.expectException(HotRodClientException.class, "(?s).*ISPN000287.*",
-                 () -> {
-                    cacheExec.execute(scriptName, params);
-                 }
+               () -> {
+                  cacheExec.execute(scriptName, params);
+               }
          );
+      }
+   }
+
+   @Test
+   public void testServerTaskWithParameters() {
+      if (!(getServers().getServerDriver() instanceof ContainerInfinispanServerDriver)) {
+         throw new AssumptionViolatedException("Requires CONTAINER mode");
+      }
+      InfinispanServerTestMethodRule serverTest = getServerTest();
+      serverTest.hotrod().withClientConfiguration(hotRodBuilders.get(TestUser.ADMIN)).create();
+
+      for (TestUser user : EnumSet.of(TestUser.ADMIN, TestUser.APPLICATION, TestUser.DEPLOYER)) {
+         RemoteCache<String, String> cache = serverTest.hotrod().withClientConfiguration(hotRodBuilders.get(user)).get();
+         ArrayList<String> messages = cache.execute("hello", Collections.singletonMap("greetee", new ArrayList<>(Arrays.asList("nurse", "kitty"))));
+         assertEquals(2, messages.size());
+         assertEquals("Hello nurse", messages.get(0));
+         assertEquals("Hello kitty", messages.get(1));
+         String message = cache.execute("hello", Collections.emptyMap());
+         assertEquals("Hello " + expectedServerPrincipalName(user), message);
+      }
+
+      for (TestUser user : EnumSet.of(TestUser.MONITOR, TestUser.OBSERVER, TestUser.WRITER)) {
+         RemoteCache<String, String> cache = serverTest.hotrod().withClientConfiguration(hotRodBuilders.get(user)).get();
+         Exceptions.expectException(HotRodClientException.class, "(?s).*ISPN000287.*",
+               () -> {
+                  cache.execute("hello", Collections.singletonMap("greetee", new ArrayList<>(Arrays.asList("nurse", "kitty"))));
+               }
+         );
+      }
+   }
+
+   @Test
+   public void testDistributedServerTaskWithParameters() {
+      if (!(getServers().getServerDriver() instanceof ContainerInfinispanServerDriver)) {
+         throw new AssumptionViolatedException("Requires CONTAINER mode");
+      }
+      InfinispanServerTestMethodRule serverTest = getServerTest();
+      serverTest.hotrod().withClientConfiguration(hotRodBuilders.get(TestUser.ADMIN)).create();
+      for (TestUser user : EnumSet.of(TestUser.ADMIN, TestUser.APPLICATION, TestUser.DEPLOYER)) {
+         // We must utilise the GenericJBossMarshaller due to ISPN-8814
+         RemoteCache<String, String> cache = serverTest.hotrod().withMarshaller(GenericJBossMarshaller.class).withClientConfiguration(hotRodBuilders.get(user)).get();
+         List<String> greetings = cache.execute("dist-hello", Collections.singletonMap("greetee", "my friend"));
+         assertEquals(2, greetings.size());
+         for (String greeting : greetings) {
+            assertTrue(greeting.matches("Hello my friend .*"));
+         }
+         greetings = cache.execute("dist-hello", Collections.emptyMap());
+         assertEquals(2, greetings.size());
+         for (String greeting : greetings) {
+            assertTrue(greeting, greeting.startsWith("Hello " + expectedServerPrincipalName(user) + " from "));
+         }
       }
    }
 
@@ -653,6 +711,25 @@ public abstract class AbstractAuthorization {
             assertTrue(latch.await(10, TimeUnit.SECONDS));
          }
       }
+   }
+
+   @Test
+   public void testConsoleLogin() {
+      for (TestUser user : TestUser.ALL) {
+         RestClientConfiguration cfg = restBuilders.get(user).build();
+         boolean followRedirects = !cfg.security().authentication().mechanism().equals("SPNEGO");
+         RestClientConfigurationBuilder builder = new RestClientConfigurationBuilder().read(cfg).clearServers().followRedirects(followRedirects);
+         RestClient client = getServerTest().rest().withClientConfiguration(builder).get();
+         assertStatus(followRedirects ? OK : TEMPORARY_REDIRECT, client.raw().get("/rest/v2/login"));
+         Json acl = Json.read(assertStatus(OK, client.raw().get("/rest/v2/security/user/acl")));
+         Json subject = acl.asJsonMap().get("subject");
+         Map<String, Object> principal = subject.asJsonList().get(0).asMap();
+         assertEquals(expectedServerPrincipalName(user), principal.get("name"));
+      }
+   }
+
+   protected String expectedServerPrincipalName(TestUser user) {
+      return user.getUser();
    }
 
    private <K, V> RemoteCache<K, V> hotRodCreateAuthzCache(String... explicitRoles) {

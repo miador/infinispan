@@ -5,12 +5,12 @@
    <parent>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-build-configuration-parent</artifactId>
-      <version>14.0.0-SNAPSHOT</version>
+      <version>15.0.0-SNAPSHOT</version>
       <relativePath>build/configuration/pom.xml</relativePath>
    </parent>
 
    <artifactId>infinispan-parent</artifactId>
-   <version>14.0.0-SNAPSHOT</version>
+   <version>15.0.0-SNAPSHOT</version>
    <packaging>pom</packaging>
    <name>Infinispan Common Parent</name>
    <description>Infinispan common parent POM module</description>
@@ -80,20 +80,25 @@
       <module>commons-test</module>
       <module>build/infinispan-defaults-maven-plugin</module>
       <module>core</module>
+      <module>core-jakarta</module>
       <module>jboss-marshalling</module>
       <module>extended-statistics</module>
       <module>counter</module>
       <module>multimap</module>
       <module>tools</module>
+      <module>tools-jakarta</module>
       <module>query-dsl</module>
       <module>query-core</module>
       <module>query</module>
+      <module>query-jakarta</module>
       <module>object-filter</module>
       <module>remote-query/remote-query-client</module>
       <module>remote-query/remote-query-server</module>
       <module>persistence</module>
       <module>persistence/jdbc</module>
+      <module>persistence/jdbc-jakarta</module>
       <module>persistence/jdbc-common</module>
+      <module>persistence/jdbc-common-jakarta</module>
       <module>persistence/remote</module>
       <module>persistence/rocksdb</module>
       <module>persistence/sql</module>
@@ -101,6 +106,7 @@
       <module>server/core</module>
       <module>server/memcached</module>
       <module>server/hotrod</module>
+      <module>server/hotrod-jakarta</module>
       <module>server/resp</module>
       <module>server/rest</module>
       <module>server/router</module>
@@ -109,7 +115,9 @@
       <module>server/tests</module>
       <module>client/rest-client</module>
       <module>client/hotrod-client</module>
+      <module>client/hotrod-client-jakarta</module>
       <module>client/hotrod</module>
+      <module>client/hotrod-jakarta</module>
       <module>client/infinispan-key-value-store-hotrod</module>
       <module>archetypes</module>
       <module>all</module>
@@ -125,8 +133,11 @@
       <module>tasks/scripting</module>
       <module>cdi</module>
       <module>cdi/common</module>
+      <module>cdi/common-jakarta</module>
       <module>cdi/embedded</module>
+      <module>cdi/embedded-jakarta</module>
       <module>cdi/remote</module>
+      <module>cdi/remote-jakarta</module>
       <module>lock</module>
       <module>jcache</module>
       <module>wildfly/feature-pack</module>
@@ -321,7 +332,6 @@
       <versionx.org.codehaus.mojo.versions-maven-plugin>2.7</versionx.org.codehaus.mojo.versions-maven-plugin>
       <versionx.org.codehaus.mojo.xml-maven-plugin>1.0.2</versionx.org.codehaus.mojo.xml-maven-plugin>
       <versionx.org.dom4j.dom4j>2.1.3</versionx.org.dom4j.dom4j>
-      <versionx.org.eclipse.transformer>0.4.0</versionx.org.eclipse.transformer>
       <versionx.org.glassfish.jaxb.jaxb-runtime>${version.glassfish.jaxb}</versionx.org.glassfish.jaxb.jaxb-runtime>
       <versionx.org.hamcrest.hamcrest-core>${version.hamcrest}</versionx.org.hamcrest.hamcrest-core>
       <versionx.org.hamcrest.hamcrest-library>${version.hamcrest}</versionx.org.hamcrest.hamcrest-library>
@@ -412,7 +422,7 @@
       <versionx.org.wildfly.openssl.wildfly-openssl-windows-x86_64>${version.org.wildfly.openssl.natives.windows_x86_64}</versionx.org.wildfly.openssl.wildfly-openssl-windows-x86_64>
       <versionx.org.wildfly.security.wildfly-elytron>${version.org.wildfly.elytron}</versionx.org.wildfly.security.wildfly-elytron>
       <versionx.org.xerial>3.36.0.1</versionx.org.xerial>
-      <versionx.org.yaml.snakeyaml>1.28</versionx.org.yaml.snakeyaml>
+      <versionx.org.yaml.snakeyaml>1.31</versionx.org.yaml.snakeyaml>
       <versionx.software.amazon.ion.java>1.0.2</versionx.software.amazon.ion.java>
       <versionx.sun.jdk.jconsole>jdk</versionx.sun.jdk.jconsole>
    </properties>
@@ -792,7 +802,7 @@
          <dependency>
             <groupId>jakarta.transaction</groupId>
             <artifactId>jakarta.transaction-api</artifactId>
-            <version>${version.jakarta.transaction}</version>
+            <version>${version.jakarta.transaction.legacy}</version>
          </dependency>
          <dependency>
             <groupId>javax.activation</groupId>
@@ -1608,6 +1618,11 @@
             <scope>test</scope>
          </dependency>
          <dependency>
+            <artifactId>HdrHistogram</artifactId>
+            <groupId>org.hdrhistogram</groupId>
+            <version>${version.hdrhistogram}</version>
+         </dependency>
+         <dependency>
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
             <version>${versionx.org.mariadb.jdbc}</version>
@@ -2038,6 +2053,11 @@
          <plugins>
             <plugin>
                <groupId>org.apache.maven.plugins</groupId>
+               <artifactId>maven-enforcer-plugin</artifactId>
+               <version>${version.maven.enforcer}</version>
+            </plugin>
+            <plugin>
+               <groupId>org.apache.maven.plugins</groupId>
                <artifactId>maven-source-plugin</artifactId>
                <version>${version.maven.source}</version>
             </plugin>
@@ -2085,22 +2105,21 @@
             <plugin>
                <groupId>org.apache.maven.plugins</groupId>
                <artifactId>maven-clean-plugin</artifactId>
-               <version>2.6.1</version>
+               <version>${version.maven.clean}</version>
             </plugin>
             <plugin>
                <groupId>org.apache.maven.plugins</groupId>
                <artifactId>maven-install-plugin</artifactId>
-               <version>2.5.2</version>
+               <version>${version.maven.install}</version>
             </plugin>
             <plugin>
                <groupId>org.apache.maven.plugins</groupId>
                <artifactId>maven-help-plugin</artifactId>
-               <version>2.1.1</version>
+               <version>3.3.0</version>
             </plugin>
             <plugin>
                <groupId>org.apache.maven.plugins</groupId>
                <artifactId>maven-deploy-plugin</artifactId>
-               <version>2.8.1</version>
             </plugin>
             <plugin>
                <groupId>org.apache.maven.plugins</groupId>
@@ -2185,15 +2204,6 @@
                <groupId>org.apache.maven.plugins</groupId>
                <artifactId>maven-javadoc-plugin</artifactId>
                <version>${version.maven.javadoc}</version>
-               <configuration>
-                  <!--
-                  The javadoc plugin only runs in the javadoc and rhq-plugin modules.
-                  But with the default configuration it tries to run a new maven instance
-                  in every dependency, in order to generate the apidocs there as well.
-                  (http://maven.apache.org/plugins-archives/maven-javadoc-plugin-2.10.3/javadoc-mojo.html#detectOfflineLinks)
-                  -->
-                  <detectOfflineLinks>false</detectOfflineLinks>
-               </configuration>
             </plugin>
             <plugin>
                <groupId>org.apache.maven.plugins</groupId>
@@ -2370,23 +2380,6 @@
                   <failOnError>false</failOnError>
                   <suppressionFile>${infinispan.root}/etc/dependency-check-suppressions.xml</suppressionFile>
                </configuration>
-            </plugin>
-            <plugin>
-               <groupId>org.eclipse.transformer</groupId>
-               <artifactId>transformer-maven-plugin</artifactId>
-               <version>${versionx.org.eclipse.transformer}</version>
-               <executions>
-                  <execution>
-                     <goals>
-                        <goal>run</goal>
-                     </goals>
-                     <phase>package</phase>
-                     <configuration>
-                        <classifier>jakarta</classifier>
-                        <artifactId>${project.artifactId}-${classifier}</artifactId>
-                     </configuration>
-                  </execution>
-               </executions>
             </plugin>
          </plugins>
       </pluginManagement>
@@ -2840,7 +2833,7 @@
                               <exec dir="${project.build.outputDirectory}/schema" executable="rsync" failonerror="${rsync.failonerror}" if:set="hasSchema" xmlns:if="ant:if">
                                  <arg value="-rvm"/>
                                  <arg line="--protocol=29"/>
-                                 <arg line="-e &quot;ssh -i ${upload.keyFile} -p ${upload.remotePort}&quot;"/>
+                                 <arg line="-e &quot;ssh -o StrictHostKeyChecking=accept-new -i ${upload.keyFile} -p ${upload.remotePort}&quot;"/>
                                  <arg line="--include='*-${infinispan.core.schema.version}.xsd'"/>
                                  <arg value="."/>
                                  <arg value="${upload.schemaDir}"/>

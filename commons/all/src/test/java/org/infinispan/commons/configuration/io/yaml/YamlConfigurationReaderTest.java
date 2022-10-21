@@ -83,7 +83,6 @@ public class YamlConfigurationReaderTest {
       assertEquals("NUll", yaml.parseLine("key: NUll").value);
 
       Exceptions.expectException(ConfigurationReaderException.class, () -> yaml.parseLine("  key # comment"));
-      Exceptions.expectException(ConfigurationReaderException.class, () -> yaml.parseLine("  key value"));
    }
 
    @Test
@@ -96,9 +95,10 @@ public class YamlConfigurationReaderTest {
          yaml.require(ConfigurationReader.ElementType.START_DOCUMENT);
          yaml.nextElement();
          yaml.require(ConfigurationReader.ElementType.START_ELEMENT, DEFAULT_NAMESPACE, "item1");
-         assertEquals(2, yaml.getAttributeCount());
+         assertEquals(3, yaml.getAttributeCount());
          assertAttribute(yaml, "item5", "v5");
          assertAttribute(yaml, "item6", "v6");
+         assertAttribute(yaml, "item10", "some idiot thought this was a good idea");
          yaml.nextElement();
          yaml.require(ConfigurationReader.ElementType.START_ELEMENT, DEFAULT_NAMESPACE, "item2");
          assertEquals(4, yaml.getAttributeCount());
@@ -149,6 +149,10 @@ public class YamlConfigurationReaderTest {
          assertEquals(2, yaml.getAttributeCount());
          assertAttribute(yaml, "a", "true");
          assertAttribute(yaml, "b", "1 2 3 ");
+         yaml.nextElement();
+         yaml.require(ConfigurationReader.ElementType.START_ELEMENT, DEFAULT_NAMESPACE, "c");
+         yaml.nextElement();
+         yaml.require(ConfigurationReader.ElementType.END_ELEMENT, DEFAULT_NAMESPACE, "c");
          yaml.nextElement();
          yaml.require(ConfigurationReader.ElementType.END_ELEMENT, DEFAULT_NAMESPACE, "item9");
          yaml.nextElement();

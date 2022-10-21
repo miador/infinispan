@@ -3,6 +3,9 @@ package org.infinispan.server.extensions;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import javax.security.auth.Subject;
+
+import org.infinispan.security.Security;
 import org.infinispan.tasks.ServerTask;
 import org.infinispan.tasks.TaskContext;
 
@@ -10,18 +13,31 @@ import org.infinispan.tasks.TaskContext;
  * @author Tristan Tarrant &lt;tristan@infinispan.org&gt;
  * @since 10.0
  **/
-public class HelloServerTask implements ServerTask {
+public class HelloServerTask implements ServerTask<Object> {
 
-   private TaskContext taskContext;
+   private static final ThreadLocal<TaskContext> taskContext = new ThreadLocal<>();
 
    @Override
-   public void setTaskContext(TaskContext taskContext) {
-      this.taskContext = taskContext;
+   public void setTaskContext(TaskContext ctx) {
+      taskContext.set(ctx);
    }
 
    @Override
    public Object call() {
-      Object greetee = taskContext.getParameters().get().get("greetee");
+      TaskContext ctx = taskContext.get();
+      Object greetee = ctx.getParameters().get().get("greetee");
+
+      if (greetee == null) {
+         if (ctx.getSubject().isPresent()) {
+            Subject subject = ctx.getSubject().get();
+            greetee = subject.getPrincipals().iterator().next().getName();
+            if (!greetee.equals(Security.getSubject().getPrincipals().iterator().next().getName())) {
+               throw new RuntimeException("Subjects do not match");
+            }
+         } else {
+            greetee = "world";
+         }
+      }
 
       // if we're dealing with a Collections of greetees we'll greet them individually
       if (greetee instanceof Collection) {
@@ -36,7 +52,7 @@ public class HelloServerTask implements ServerTask {
    }
 
    private String greet(Object greetee) {
-      return greetee == null ? "Hello world" : "Hello " + greetee;
+      return "Hello " + greetee;
    }
 
    @Override

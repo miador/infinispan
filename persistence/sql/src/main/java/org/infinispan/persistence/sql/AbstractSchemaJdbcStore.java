@@ -68,7 +68,7 @@ public abstract class AbstractSchemaJdbcStore<K, V, C extends AbstractSchemaJdbc
       ImmutableSerializationContext serializationContext = componentRegistry.getComponent(SerializationContextRegistry.class).getUserCtx();
 
       ProtoSchemaOptions<K, V, C> options = verifySchemaAndCreateOptions(serializationContext,
-            config.getSchemaJdbcConfiguration(), parameters, primaryParameters, keyDataConversion, valueDataConversion,
+            config.schema(), parameters, primaryParameters, keyDataConversion, valueDataConversion,
             ctx.getMarshallableEntryFactory());
 
       return actualCreateTableOperations(options);
@@ -101,7 +101,7 @@ public abstract class AbstractSchemaJdbcStore<K, V, C extends AbstractSchemaJdbc
     */
    abstract Parameter[] generateParameterInformation(C config, ConnectionFactory connectionFactory) throws SQLException;
 
-   int typeWeUse(int sqlType, String typeName) {
+   int typeWeUse(int sqlType, String typeName, int scale) {
       if (sqlType == Types.VARCHAR) {
          // Some DBs store VARBINARY as VARCHAR FOR BIT DATA (ahem... DB2)
          if (typeName.contains("BIT") || typeName.contains("BINARY")) {
@@ -110,6 +110,9 @@ public abstract class AbstractSchemaJdbcStore<K, V, C extends AbstractSchemaJdbc
       } else if (typeName.toUpperCase().startsWith("BOOL")) {
          // Some databases store as int32 or something similar but have the typename as BOOLEAN or some derivation
          return Types.BOOLEAN;
+      } else if (sqlType == Types.NUMERIC && scale == 0) {
+         // If scale is 0 we don't want to use float or double types
+         return Types.INTEGER;
       }
       return sqlType;
    }
@@ -144,7 +147,7 @@ public abstract class AbstractSchemaJdbcStore<K, V, C extends AbstractSchemaJdbc
       }
       String valueMessageName = schemaJdbcConfiguration.messageName();
       String fullValueMessageName = null;
-      boolean hasEmbeddedKey = config.getSchemaJdbcConfiguration().embeddedKey();
+      boolean hasEmbeddedKey = config.schema().embeddedKey();
       if (parameterMap.size() - (hasEmbeddedKey ? 0 : uniquePrimaryParameters) > 1 || valueMessageName != null) {
          if (valueMessageName == null || packageName == null) {
             throw log.valueMultipleColumnWithoutSchema();
@@ -206,7 +209,7 @@ public abstract class AbstractSchemaJdbcStore<K, V, C extends AbstractSchemaJdbc
 
    CacheConfigurationException unusedValueParamsException(List<Parameter> unusedParamNames) {
       return log.valueNotInSchema(unusedParamNames.stream().map(Parameter::getName).collect(Collectors.toList()),
-            config.getSchemaJdbcConfiguration().messageName());
+            config.schema().messageName());
    }
 
    private void updatePrimitiveJsonConsumer(Parameter parameter, boolean key) {
@@ -228,7 +231,7 @@ public abstract class AbstractSchemaJdbcStore<K, V, C extends AbstractSchemaJdbc
       if (genericDescriptor instanceof Descriptor) {
          recursiveUpdateParameters((Descriptor) genericDescriptor, parameterMap, null, seenNames, key);
       } else if (genericDescriptor instanceof EnumDescriptor) {
-         if (!key && config.getSchemaJdbcConfiguration().embeddedKey()) {
+         if (!key && config.schema().embeddedKey()) {
             throw log.keyCannotEmbedWithEnum(fullTypeName);
          }
          String name = genericDescriptor.getName();
@@ -279,7 +282,7 @@ public abstract class AbstractSchemaJdbcStore<K, V, C extends AbstractSchemaJdbc
             }
             continue;
          }
-         if (parameter.primaryIdentifier && !key && !config.getSchemaJdbcConfiguration().embeddedKey()) {
+         if (parameter.primaryIdentifier && !key && !config.schema().embeddedKey()) {
             throw log.primaryKeyPresentButNotEmbedded(parameter.name, fieldDescriptor.getTypeName());
          }
 
@@ -360,13 +363,15 @@ public abstract class AbstractSchemaJdbcStore<K, V, C extends AbstractSchemaJdbc
       protected static ProtostreamFieldType from(int sqlType) {
          switch (sqlType) {
             case Types.INTEGER:
-            case Types.NUMERIC:
                return INT_32;
             case Types.BIGINT:
                return INT_64;
             case Types.FLOAT:
+            case Types.REAL:
                return FLOAT;
             case Types.DOUBLE:
+            case Types.NUMERIC:
+            case Types.DECIMAL:
                return DOUBLE;
             case Types.BIT:
             case Types.BOOLEAN:
@@ -585,7 +590,7 @@ public abstract class AbstractSchemaJdbcStore<K, V, C extends AbstractSchemaJdbc
                if (keyJson != null) {
                   updateJsonWithParameter(rs, parameter, i + 1, keyJson, true);
                }
-               if (!schemaOptions.config.getSchemaJdbcConfiguration().embeddedKey()) {
+               if (!schemaOptions.config.schema().embeddedKey()) {
                   continue;
                }
             }
@@ -622,7 +627,7 @@ public abstract class AbstractSchemaJdbcStore<K, V, C extends AbstractSchemaJdbc
 
       @Override
       protected void prepareValueStatement(PreparedStatement ps, int segment, MarshallableEntry<? extends K, ? extends V> entry) throws SQLException {
-         boolean embeddedKey = schemaOptions.config.getSchemaJdbcConfiguration().embeddedKey();
+         boolean embeddedKey = schemaOptions.config.schema().embeddedKey();
          Json valueJson = Json.read((String) schemaOptions.valueConversion.fromStorage(entry.getValue()));
          Json keyJson = embeddedKey ? valueJson : Json.read((String) schemaOptions.keyConversion.fromStorage(entry.getKey()));
          for (int i = 0; i < upsertParameters.length; ++i) {

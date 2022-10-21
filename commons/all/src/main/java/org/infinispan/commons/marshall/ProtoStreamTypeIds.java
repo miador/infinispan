@@ -36,6 +36,7 @@ public interface ProtoStreamTypeIds {
    int PROTOBUF_VALUE_WRAPPER = 11;
    int MEDIA_TYPE = 12;
    int PRIVATE_METADATA = 13;
+   int SUBJECT = 14;
 
    // Priority counter values
    int COUNTER_VALUE = 125;
@@ -103,6 +104,7 @@ public interface ProtoStreamTypeIds {
    int SCRIPT_METADATA = SCRIPTING_LOWER_BOUND + 1;
    int DISTRIBUTED_SERVER_TASK = SCRIPTING_LOWER_BOUND + 2;
    int DISTRIBUTED_SERVER_TASK_PARAMETER = SCRIPTING_LOWER_BOUND + 3;
+   int DISTRIBUTED_SERVER_TASK_CONTEXT = SCRIPTING_LOWER_BOUND + 4;
 
    // Memcached 5000 -> 5099
    int MEMCACHED_LOWER_BOUND = 5000;

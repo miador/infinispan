@@ -33,7 +33,15 @@ public class Game {
       return description;
    }
 
-   @AutoProtoSchemaBuilder(includeClasses = Game.class)
+   @Override
+   public String toString() {
+      return "Game{" +
+            "name='" + name + '\'' +
+            ", description='" + description + '\'' +
+            '}';
+   }
+
+   @AutoProtoSchemaBuilder(includeClasses = {Game.class, NonIndexedGame.class})
    public interface GameSchema extends GeneratedSchema {
       GameSchema INSTANCE = new GameSchemaImpl();
    }

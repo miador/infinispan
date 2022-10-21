@@ -32,7 +32,6 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 
@@ -49,8 +48,7 @@ public class MetricsCollector implements Constants {
 
    private static final Log log = LogFactory.getLog(MetricsCollector.class);
 
-   private PrometheusMeterRegistry baseRegistry;
-   private PrometheusMeterRegistry vendorRegistry;
+   private PrometheusMeterRegistry registry;
 
    private Tag nodeTag;
 
@@ -65,23 +63,15 @@ public class MetricsCollector implements Constants {
    protected MetricsCollector() {
    }
 
-   public PrometheusMeterRegistry getBaseRegistry() {
-      return baseRegistry;
-   }
-
-   public PrometheusMeterRegistry getVendorRegistry() {
-      return vendorRegistry;
+   public PrometheusMeterRegistry registry() {
+      return registry;
    }
 
    @Start
    protected void start() {
-      baseRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-      baseRegistry.config().meterFilter(new BaseFilter());
-      new BaseAdditionalMetrics().bindTo(baseRegistry);
-
-      vendorRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-      vendorRegistry.config().meterFilter(new VendorFilter());
-      new VendorAdditionalMetrics().bindTo(vendorRegistry);
+      registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+      new BaseAdditionalMetrics().bindTo(registry);
+      new VendorAdditionalMetrics().bindTo(registry);
 
       Transport transport = transportRef.running();
       String nodeName = transport != null ? transport.getAddress().toString() : globalConfig.transport().nodeName();
@@ -99,16 +89,9 @@ public class MetricsCollector implements Constants {
 
    @Stop
    protected void stop() {
-      try {
-         if (baseRegistry != null) {
-            baseRegistry.close();
-            baseRegistry = null;
-         }
-      } finally {
-         if (vendorRegistry != null) {
-            vendorRegistry.close();
-            vendorRegistry = null;
-         }
+      if (registry != null) {
+         registry.close();
+         registry = null;
       }
    }
 
@@ -159,7 +142,7 @@ public class MetricsCollector implements Constants {
          Consumer<TimerTracker> setter = (Consumer<TimerTracker>) attr.setter(instance);
 
          if (getter != null || setter != null) {
-            String metricName = namePrefix + NameUtils.decamelize(attr.getName());
+            String metricName = VendorAdditionalMetrics.PREFIX + namePrefix + NameUtils.decamelize(attr.getName());
 
             if (getter != null) {
                if (metricsCfg.gauges()) {
@@ -167,7 +150,7 @@ public class MetricsCollector implements Constants {
                         .tags(tags)
                         .strongReference(true)
                         .description(attr.getDescription())
-                        .register(vendorRegistry);
+                        .register(registry);
 
                   Meter.Id id = gauge.getId();
 
@@ -181,7 +164,7 @@ public class MetricsCollector implements Constants {
                   Timer timer = Timer.builder(metricName)
                         .tags(tags)
                         .description(attr.getDescription())
-                        .register(vendorRegistry);
+                        .register(registry);
 
                   Meter.Id id = timer.getId();
 
@@ -197,7 +180,7 @@ public class MetricsCollector implements Constants {
 
       if (log.isTraceEnabled()) {
          log.tracef("Registered %d metrics. Metric registry @%x contains %d metrics.",
-               metricIds.size(), System.identityHashCode(vendorRegistry), vendorRegistry.getMeters().size());
+               metricIds.size(), System.identityHashCode(registry), registry.getMeters().size());
       }
 
       return metricIds;
@@ -217,37 +200,19 @@ public class MetricsCollector implements Constants {
    }
 
    public void unregisterMetric(Object metricId) {
-      if (vendorRegistry == null) {
+      if (registry == null) {
          return;
       }
 
-      Meter removed = vendorRegistry.remove((Meter.Id) metricId);
+      Meter removed = registry.remove((Meter.Id) metricId);
       if (log.isTraceEnabled()) {
          if (removed != null) {
             log.tracef("Unregistered metric \"%s\". Metric registry @%x contains %d metrics.",
-                  metricId, System.identityHashCode(vendorRegistry), vendorRegistry.getMeters().size());
+                  metricId, System.identityHashCode(registry), registry.getMeters().size());
          } else {
             log.tracef("Could not remove unexisting metric \"%s\". Metric registry @%x contains %d metrics.",
-                  metricId, System.identityHashCode(vendorRegistry), vendorRegistry.getMeters().size());
+                  metricId, System.identityHashCode(registry), registry.getMeters().size());
          }
-      }
-   }
-
-   private static class BaseFilter implements MeterFilter {
-      private static final String PREFIX = "base.";
-
-      @Override
-      public Meter.Id map(Meter.Id id) {
-         return id.withName(PREFIX + id.getName());
-      }
-   }
-
-   private static class VendorFilter implements MeterFilter {
-      private static final String PREFIX = "vendor.";
-
-      @Override
-      public Meter.Id map(Meter.Id id) {
-         return id.withName(PREFIX + id.getName());
       }
    }
 }

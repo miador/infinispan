@@ -106,7 +106,7 @@ public abstract class AbstractSQLStoreFunctionalTest extends BaseStoreFunctional
    // DB table is denormalized when read
    @Override
    protected Person createEmptyPerson(String name) {
-      return new Person(name, new Address(), null, null, null, false);
+      return new Person(name, new Address());
    }
 
    @Override
@@ -128,7 +128,7 @@ public abstract class AbstractSQLStoreFunctionalTest extends BaseStoreFunctional
    @Override
    public void testPreloadStoredAsBinary() {
       schemaConsumer = builder ->
-            builder.schemaJdbcConfigurationBuilder()
+            builder.schema()
                   .embeddedKey(false)
                   .messageName("Person")
                   .packageName("org.infinispan.test.core");
@@ -181,7 +181,7 @@ public abstract class AbstractSQLStoreFunctionalTest extends BaseStoreFunctional
 
    public void testDBHasMoreKeyColumnsWithKeySchema(Method m) {
       schemaConsumer = builder ->
-            builder.schemaJdbcConfigurationBuilder()
+            builder.schema()
                   .embeddedKey(false)
                   .keyMessageName("Key")
                   .packageName("org.infinispan.test.core");
@@ -213,7 +213,7 @@ public abstract class AbstractSQLStoreFunctionalTest extends BaseStoreFunctional
 
    public void testDBHasMoreValueColumnsWithValueSchema(Method m) {
       schemaConsumer = builder ->
-            builder.schemaJdbcConfigurationBuilder()
+            builder.schema()
                   .embeddedKey(false)
                   .messageName("Person")
                   .packageName("org.infinispan.test.core");
@@ -232,7 +232,7 @@ public abstract class AbstractSQLStoreFunctionalTest extends BaseStoreFunctional
 
    public void testDBHasLessValueColumnsWithSchema(Method m) {
       schemaConsumer = builder ->
-            builder.schemaJdbcConfigurationBuilder()
+            builder.schema()
                   .embeddedKey(false)
                   .messageName("Person")
                   .packageName("org.infinispan.test.core");
@@ -241,7 +241,7 @@ public abstract class AbstractSQLStoreFunctionalTest extends BaseStoreFunctional
 
    public void testEmbeddedKey(Method m) {
       schemaConsumer = builder ->
-            builder.schemaJdbcConfigurationBuilder()
+            builder.schema()
                   .embeddedKey(true)
                   .messageName("Person")
                   .packageName("org.infinispan.test.core");
@@ -250,7 +250,7 @@ public abstract class AbstractSQLStoreFunctionalTest extends BaseStoreFunctional
 
    public void testEnumForKey(Method m) {
       schemaConsumer = builder ->
-            builder.schemaJdbcConfigurationBuilder()
+            builder.schema()
                   .embeddedKey(false)
                   .keyMessageName("Sex")
                   .packageName("org.infinispan.test.core");
@@ -259,7 +259,7 @@ public abstract class AbstractSQLStoreFunctionalTest extends BaseStoreFunctional
 
    public void testEnumForValue(Method m) {
       schemaConsumer = builder ->
-            builder.schemaJdbcConfigurationBuilder()
+            builder.schema()
                   .embeddedKey(false)
                   .messageName("Sex")
                   .packageName("org.infinispan.test.core");
@@ -268,7 +268,7 @@ public abstract class AbstractSQLStoreFunctionalTest extends BaseStoreFunctional
 
    public void testEmbeddedLoadSchemaAfterCreation(Method m) {
       schemaConsumer = builder ->
-            builder.schemaJdbcConfigurationBuilder()
+            builder.schema()
                   .embeddedKey(true)
                   .messageName("Person")
                   .packageName("org.infinispan.test.core");
@@ -432,6 +432,10 @@ public abstract class AbstractSQLStoreFunctionalTest extends BaseStoreFunctional
                "accepted_tos " + booleanType() + ", " +
                "sex VARCHAR(255), " +
                "birthdate " + dateTimeType() + ", " +
+               "moneyOwned NUMERIC(10, 4), " +
+               "moneyOwed FLOAT, " +
+               "decimalField DECIMAL(10, 4), " +
+               "realField REAL, " +
                "PRIMARY KEY (keycolumn))";
       } else if (cacheName.equalsIgnoreCase("testStoreByteArrays")) {
          tableCreation = "CREATE TABLE " + tableName + " (" +

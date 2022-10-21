@@ -4,7 +4,7 @@
    <parent>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-persistence-parent</artifactId>
-      <version>14.0.0-SNAPSHOT</version>
+      <version>15.0.0-SNAPSHOT</version>
       <relativePath>../pom.xml</relativePath>
    </parent>
 
@@ -13,6 +13,11 @@
    <description>Infinispan JDBC CacheStore Common module</description>
 
    <dependencies>
+      <dependency>
+         <groupId>org.infinispan</groupId>
+         <artifactId>infinispan-core</artifactId>
+      </dependency>
+
       <dependency>
          <groupId>org.infinispan.protostream</groupId>
          <artifactId>protostream-processor</artifactId>
@@ -95,10 +100,6 @@
                   </goals>
                </execution>
             </executions>
-         </plugin>
-         <plugin>
-            <groupId>org.eclipse.transformer</groupId>
-            <artifactId>transformer-maven-plugin</artifactId>
          </plugin>
       </plugins>
    </build>

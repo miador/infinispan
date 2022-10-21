@@ -57,6 +57,7 @@ public enum Attribute {
     DATA_CONTAINER,
     DEFAULT_CACHE,
     DEFAULT_STACK,
+    DEFAULT_MAX_RESULTS,
     DOMAIN,
     ENABLED,
     ENCODER,
@@ -222,7 +223,8 @@ public enum Attribute {
     INVALIDATION_THRESHOLD,
     CONTEXT_INITIALIZERS,
     GROUPER,
-    ACCURATE_SIZE;
+    ACCURATE_SIZE,
+    REGEX;
 
     private final String name;
 

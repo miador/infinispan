@@ -11,6 +11,7 @@ import java.util.Map;
 
 import org.infinispan.commons.configuration.ConfiguredBy;
 import org.infinispan.commons.util.IntSet;
+import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.persistence.jdbc.common.TableOperations;
 import org.infinispan.persistence.jdbc.common.connectionfactory.ConnectionFactory;
 import org.infinispan.persistence.sql.configuration.QueriesJdbcConfiguration;
@@ -22,7 +23,7 @@ import org.infinispan.persistence.sql.configuration.QueriesJdbcStoreConfiguratio
 public class QueriesJdbcStore<K, V> extends AbstractSchemaJdbcStore<K, V, QueriesJdbcStoreConfiguration> {
    @Override
    protected TableOperations<K, V> actualCreateTableOperations(ProtoSchemaOptions<K, V, QueriesJdbcStoreConfiguration> options) {
-      QueriesJdbcConfigurationBuilder builder = new QueriesJdbcConfigurationBuilder();
+      QueriesJdbcConfigurationBuilder<?> builder = new QueriesJdbcConfigurationBuilder<>(new ConfigurationBuilder().persistence().addStore(QueriesJdbcStoreConfigurationBuilder.class));
       QueriesJdbcConfiguration originalConfig = config.getQueriesJdbcConfiguration();
       builder.read(originalConfig);
 
@@ -96,7 +97,8 @@ public class QueriesJdbcStore<K, V> extends AbstractSchemaJdbcStore<K, V, Querie
             for (int i = 1; i <= rsMetadata.getColumnCount(); ++i) {
                int columnType = rsMetadata.getColumnType(i);
                String name = rsMetadata.getColumnName(i);
-               int actualType = typeWeUse(columnType, rsMetadata.getColumnTypeName(i));
+               int scale = rsMetadata.getScale(i);
+               int actualType = typeWeUse(columnType, rsMetadata.getColumnTypeName(i), scale);
                ProtostreamFieldType type = ProtostreamFieldType.from(actualType);
                String lowerCaseName = name.toLowerCase();
                // Make sure to reuse same parameter instance just with different offset

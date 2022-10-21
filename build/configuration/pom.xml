@@ -12,7 +12,7 @@
 
    <groupId>org.infinispan</groupId>
    <artifactId>infinispan-build-configuration-parent</artifactId>
-   <version>14.0.0-SNAPSHOT</version>
+   <version>15.0.0-SNAPSHOT</version>
    <packaging>pom</packaging>
 
    <name>Infinispan Common Parent</name>
@@ -84,15 +84,17 @@
    <properties>
       <maven.compiler.source>11</maven.compiler.source>
       <maven.compiler.target>11</maven.compiler.target>
+      <maven.javadoc.skip>false</maven.javadoc.skip>
+      <transform.skip>true</transform.skip>
 
       <!-- === Branding Configuration === -->
       <infinispan.brand.name>Infinispan</infinispan.brand.name>
       <infinispan.brand.prefix>infinispan</infinispan.brand.prefix>
       <infinispan.brand.short-name>infinispan</infinispan.brand.short-name>
       <infinispan.brand.version>${project.version}</infinispan.brand.version>
-      <infinispan.codename>Flying Saucer</infinispan.codename>
+      <infinispan.codename>N/A</infinispan.codename>
       <infinispan.module.slot.prefix>ispn</infinispan.module.slot.prefix>
-      <infinispan.base.version>14.0</infinispan.base.version>
+      <infinispan.base.version>15.0</infinispan.base.version>
       <infinispan.module.slot>${infinispan.module.slot.prefix}-${infinispan.base.version}</infinispan.module.slot>
       <infinispan.core.schema.version>${infinispan.base.version}</infinispan.core.schema.version>
       <infinispan.olm.openshift.source>community-operators</infinispan.olm.openshift.source>
@@ -132,7 +134,7 @@
       <version.byteman>4.0.9</version.byteman>
       <version.caffeine>3.1.1</version.caffeine>
       <version.commons.compress>1.21</version.commons.compress>
-      <version.console>14.0.0.CR1</version.console>
+      <version.console>14.0.1.Final</version.console>
       <version.fabric8.kubernetes-client>5.12.2</version.fabric8.kubernetes-client>
       <version.glassfish.jaxb>2.3.1</version.glassfish.jaxb>
       <version.glassfish.json>1.1.4</version.glassfish.json>
@@ -141,7 +143,7 @@
       <version.hibernate53.core>5.3.22.Final</version.hibernate53.core>
       <version.hibernate.core>6.0.1.Final</version.hibernate.core>
       <version.hibernate.search>6.1.5.Final</version.hibernate.search>
-      <version.infinispan>14.0.0-SNAPSHOT</version.infinispan>
+      <version.infinispan>15.0.0-SNAPSHOT</version.infinispan>
       <version.infinispan.arquillian>1.2.0.Beta3</version.infinispan.arquillian>
       <version.infinispan.doclets>1.4.0.Final</version.infinispan.doclets>
       <version.infinispan.maven-plugins>1.0.2.Final</version.infinispan.maven-plugins>
@@ -151,7 +153,8 @@
       <version.jackson>2.13.3</version.jackson>
       <version.jackson.databind>2.13.3</version.jackson.databind>
       <version.jacoco>0.8.7</version.jacoco>
-      <version.jakarta.transaction>1.3.3</version.jakarta.transaction>
+      <version.jakarta.transaction.legacy>1.3.3</version.jakarta.transaction.legacy>
+      <version.jakarta.transaction>2.0.1</version.jakarta.transaction>
       <version.jakarta.enterprise.cdi>2.0.2</version.jakarta.enterprise.cdi>
       <version.jakarta.persistence>2.2.3</version.jakarta.persistence>
       <version.javax.cache>1.1.0</version.javax.cache>
@@ -176,7 +179,7 @@
       <version.mockito_dep.bytebuddy>1.9.7</version.mockito_dep.bytebuddy>
       <version.mockito_dep.objenesis>2.6</version.mockito_dep.objenesis>
       <version.nashorn>15.4</version.nashorn>
-      <version.netty>4.1.80.Final</version.netty>
+      <version.netty>4.1.82.Final</version.netty>
       <version.netty.incubator.iouring>0.0.14.Final</version.netty.incubator.iouring>
       <version.okhttp>3.14.9</version.okhttp>
       <version.openjdk.jmh>1.23</version.openjdk.jmh>
@@ -191,11 +194,11 @@
       <version.ow2.asm>9.3</version.ow2.asm>
       <version.picketbox>5.0.3.Final</version.picketbox>
       <version.picketlink>2.5.5.SP12</version.picketlink>
-      <version.protostream>4.5.0.CR1</version.protostream>
+      <version.protostream>4.5.0.Final</version.protostream>
       <version.protostuff>1.6.2</version.protostuff>
       <version.reactivestreams>1.0.3</version.reactivestreams>
       <version.rocksdb>7.1.2</version.rocksdb>
-      <version.rxjava>3.1.3</version.rxjava>
+      <version.rxjava>3.1.4</version.rxjava>
       <version.micrometer>1.9.2</version.micrometer>
 
       <!-- these versions must be kept in sync with ${version.micrometer}: -->
@@ -210,7 +213,7 @@
       <version.spring.boot>2.7.0</version.spring.boot>
       <version.spring5>5.3.20</version.spring5>
       <version.spring.session>2.7.0</version.spring.session>
-      <version.kafka.client>2.8.1</version.kafka.client>
+      <version.kafka.client>3.2.3</version.kafka.client>
       <version.xom>1.3.7</version.xom>
       <version.xstream>1.4.19</version.xstream>
 
@@ -222,7 +225,10 @@
       <version.maven.buildhelper>3.1.0</version.maven.buildhelper>
       <version.maven.bundle>4.2.1</version.maven.bundle>
       <version.maven.gpg>3.0.1</version.maven.gpg>
+      <version.maven.clean>3.2.0</version.maven.clean>
       <version.maven-compiler-plugin>3.10.1</version.maven-compiler-plugin>
+      <version.maven.enforcer>3.1.0</version.maven.enforcer>
+      <version.maven.install>3.0.1</version.maven.install>
       <version.maven.invoker>3.2.1</version.maven.invoker>
       <version.maven.jar>3.2.0</version.maven.jar>
       <version.maven.javadoc>3.4.0</version.maven.javadoc>
@@ -232,15 +238,17 @@
       <version.maven.resources>3.2.0</version.maven.resources>
       <version.maven.shade>3.3.0</version.maven.shade>
       <version.maven.source>3.2.0</version.maven.source>
-      <version.maven.surefire>3.0.0-M6</version.maven.surefire>
+      <version.maven.surefire>3.0.0-M5</version.maven.surefire>
       <version.org.jboss.galleon>4.2.8.Final</version.org.jboss.galleon>
       <version.org.wildfly.galleon-plugins>5.2.1.Final</version.org.wildfly.galleon-plugins>
       <version.sonatype.nexus-staging-plugin>1.6.13</version.sonatype.nexus-staging-plugin>
+      <version.eclipse.transformer>0.5.0</version.eclipse.transformer>
       <!-- overwrite version in jboss-parent -->
       <version.pmd.plugin>3.16.0</version.pmd.plugin>
       <version.owasp-dependency-check-plugin>7.1.0</version.owasp-dependency-check-plugin>
       <version.spotbugs.plugin>4.7.0.0</version.spotbugs.plugin>
       <version.weld-servlet>2.4.8.Final</version.weld-servlet>
+      <version.deploy.plugin>3.0.0</version.deploy.plugin>
 
       <!-- versionx -->
       <versionx.com.puppycrawl.tools.checkstyle>8.32</versionx.com.puppycrawl.tools.checkstyle>
@@ -306,11 +314,87 @@
                   </execution>
                </executions>
             </plugin>
+            <plugin>
+               <groupId>org.eclipse.transformer</groupId>
+               <artifactId>transformer-maven-plugin</artifactId>
+               <version>${version.eclipse.transformer}</version>
+            </plugin>
          </plugins>
       </pluginManagement>
    </build>
 
    <profiles>
+      <profile>
+         <id>jakarta-transform</id>
+         <activation>
+            <file>
+               <exists>${basedir}/jakarta.txt</exists>
+            </file>
+         </activation>
+         <build>
+            <plugins>
+               <plugin>
+                  <groupId>org.codehaus.mojo</groupId>
+                  <artifactId>build-helper-maven-plugin</artifactId>
+                  <executions>
+                     <execution>
+                        <id>jakarta-transform</id>
+                        <goals>
+                           <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                           <name>original.artifactId</name>
+                           <value>${project.artifactId}</value>
+                           <regex>\-jakarta$</regex>
+                           <failIfNoMatch>false</failIfNoMatch>
+                        </configuration>
+                     </execution>
+                  </executions>
+               </plugin>
+               <plugin>
+                  <groupId>org.eclipse.transformer</groupId>
+                  <artifactId>transformer-maven-plugin</artifactId>
+                  <extensions>true</extensions>
+                  <configuration>
+                     <rules>
+                        <jakartaDefaults>true</jakartaDefaults>
+                     </rules>
+                  </configuration>
+                  <executions>
+                     <execution>
+                        <id>default-jar</id>
+                        <goals>
+                           <goal>jar</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                           <artifact>
+                              <groupId>${project.groupId}</groupId>
+                              <artifactId>${original.artifactId}</artifactId>
+                              <version>${project.version}</version>
+                           </artifact>
+                        </configuration>
+                     </execution>
+                     <execution>
+                        <id>source-jar</id>
+                        <goals>
+                           <goal>jar</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                           <artifact>
+                              <groupId>${project.groupId}</groupId>
+                              <artifactId>${original.artifactId}</artifactId>
+                              <version>${project.version}</version>
+                              <classifier>sources</classifier>
+                           </artifact>
+                        </configuration>
+                     </execution>
+                  </executions>
+               </plugin>
+            </plugins>
+         </build>
+      </profile>
       <profile>
          <id>community-release</id>
          <activation>
@@ -320,11 +404,41 @@
             <plugins>
                <plugin>
                   <groupId>org.apache.maven.plugins</groupId>
-                  <artifactId>maven-gpg-plugin</artifactId>
+                  <artifactId>maven-javadoc-plugin</artifactId>
+                  <configuration>
+                     <skip>${maven.javadoc.skip}</skip>
+                     <detectOfflineLinks>false</detectOfflineLinks>
+                  </configuration>
+               </plugin>
+               <plugin>
+                  <groupId>org.eclipse.transformer</groupId>
+                  <artifactId>transformer-maven-plugin</artifactId>
+                  <configuration>
+                     <rules>
+                        <jakartaDefaults>true</jakartaDefaults>
+                     </rules>
+                  </configuration>
+                  <executions>
+                     <execution>
+                        <id>javadoc-jar</id>
+                        <goals>
+                           <goal>jar</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                           <artifact>
+                              <groupId>${project.groupId}</groupId>
+                              <artifactId>${original.artifactId}</artifactId>
+                              <version>${project.version}</version>
+                              <classifier>javadoc</classifier>
+                           </artifact>
+                        </configuration>
+                     </execution>
+                  </executions>
                </plugin>
                <plugin>
                   <groupId>org.apache.maven.plugins</groupId>
-                  <artifactId>maven-javadoc-plugin</artifactId>
+                  <artifactId>maven-gpg-plugin</artifactId>
                </plugin>
             </plugins>
          </build>
