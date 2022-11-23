@@ -32,6 +32,7 @@ import static org.testng.AssertJUnit.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Collection;
@@ -39,6 +40,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +57,10 @@ import org.infinispan.client.rest.RestClient;
 import org.infinispan.client.rest.RestEntity;
 import org.infinispan.client.rest.RestRawClient;
 import org.infinispan.client.rest.RestResponse;
+import org.infinispan.commons.configuration.io.NamingStrategy;
+import org.infinispan.commons.configuration.io.PropertyReplacer;
+import org.infinispan.commons.configuration.io.URLConfigurationResourceResolver;
+import org.infinispan.commons.configuration.io.yaml.YamlConfigurationReader;
 import org.infinispan.commons.dataconversion.MediaType;
 import org.infinispan.commons.dataconversion.internal.Json;
 import org.infinispan.commons.marshall.ProtoStreamMarshaller;
@@ -74,13 +80,13 @@ import org.infinispan.persistence.dummy.DummyInMemoryStoreConfigurationBuilder;
 import org.infinispan.query.remote.client.ProtobufMetadataManagerConstants;
 import org.infinispan.rest.ResponseHeader;
 import org.infinispan.rest.assertion.ResponseAssertion;
+import org.infinispan.test.TestException;
 import org.infinispan.test.TestingUtil;
 import org.infinispan.topology.LocalTopologyManager;
 import org.testng.annotations.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
-import org.yaml.snakeyaml.Yaml;
 
 @Test(groups = "functional", testName = "rest.CacheResourceV2Test")
 public class CacheResourceV2Test extends AbstractRestResourceTest {
@@ -358,6 +364,9 @@ public class CacheResourceV2Test extends AbstractRestResourceTest {
       Configuration xmlConfig = registry.parse(cache1Xml).getCurrentConfigurationBuilder().build();
       assertEquals(1200000, xmlConfig.clustering().l1().lifespan());
       assertEquals(60500, xmlConfig.clustering().stateTransfer().timeout());
+
+      response = client.cache("cache1").configuration("application/xml; q=0.9");
+      assertThat(response).isOk();
    }
 
    @Test
@@ -472,6 +481,48 @@ public class CacheResourceV2Test extends AbstractRestResourceTest {
 
          // But less space than before.
          assertTrue(node.at("memory_used").asLong() < previousSizes.get(node.at("node_name").asString()));
+      }
+   }
+
+   @Test
+   public void testCacheV2KeyDistribution() {
+      final String cacheName = "keyDistribution";
+      String cacheJson = "{ \"distributed-cache\" : { \"statistics\":true } }";
+      createCache(cacheJson, cacheName);
+
+      RestCacheClient cacheClient = client.cache(cacheName);
+
+      putStringValueInCache(cacheName, "key1", "data");
+      putStringValueInCache(cacheName, "key2", "data");
+      Map<String, Boolean> sample = Map.of("key1", true, "key2", true, "unknown", false);
+
+      for (Map.Entry<String, Boolean> entry : sample.entrySet()) {
+         CompletionStage<RestResponse> response = cacheClient.distribution(entry.getKey());
+         assertThat(response).isOk();
+
+         try (RestResponse restResponse = join(response)) {
+            Json jsonNode = Json.read(restResponse.getBody());
+            assertEquals((boolean) entry.getValue(), jsonNode.at("contains_key").asBoolean());
+            assertTrue(jsonNode.at("owners").isArray());
+
+            List<Json> distribution = jsonNode.at("owners").asJsonList();
+            assertEquals(NUM_SERVERS, distribution.size());
+
+            Pattern pattern = Pattern.compile(this.getClass().getSimpleName() + "-Node[a-zA-Z]$");
+            for (Json node : distribution) {
+               assertEquals(node.at("node_addresses").asJsonList().size(), 1);
+               assertTrue(pattern.matcher(node.at("node_name").asString()).matches());
+               assertTrue(node.has("primary"));
+            }
+
+            if (entry.getValue()) {
+               assertTrue(distribution.stream().anyMatch(n -> n.at("primary").asBoolean()));
+            } else {
+               assertTrue(distribution.stream().noneMatch(n -> n.at("primary").asBoolean()));
+            }
+         } catch (Exception e) {
+            throw new TestException(e);
+         }
       }
    }
 
@@ -1051,11 +1102,12 @@ public class CacheResourceV2Test extends AbstractRestResourceTest {
    }
 
    private void checkYaml(CompletionStage<RestResponse> response, String name) {
-      Yaml yaml = new Yaml();
-      Map<String, Object> config = yaml.load(join(response).getBody());
-      assertEquals("SYNC", getYamlProperty(config, name, "distributedCache", "mode"));
-      assertEquals("OBJECT", getYamlProperty(config, name, "distributedCache", "memory", "storage"));
-      assertEquals("20", getYamlProperty(config, name, "distributedCache", "memory", "maxCount"));
+      try (YamlConfigurationReader yaml = new YamlConfigurationReader(new StringReader(join(response).getBody()), new URLConfigurationResourceResolver(null), new Properties(), PropertyReplacer.DEFAULT, NamingStrategy.KEBAB_CASE)) {
+         Map<String, Object> config = yaml.asMap();
+         assertEquals("SYNC", getYamlProperty(config, name, "distributedCache", "mode"));
+         assertEquals("OBJECT", getYamlProperty(config, name, "distributedCache", "memory", "storage"));
+         assertEquals("20", getYamlProperty(config, name, "distributedCache", "memory", "maxCount"));
+      }
    }
 
    public static <T> T getYamlProperty(Map<String, Object> yaml, String... names) {

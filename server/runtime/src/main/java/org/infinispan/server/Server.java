@@ -320,7 +320,7 @@ public class Server implements ServerManagement, AutoCloseable {
          }
          if (log.isDebugEnabled()) {
             StringBuilderWriter sw = new StringBuilderWriter();
-            try (ConfigurationWriter w = ConfigurationWriter.to(sw).build()) {
+            try (ConfigurationWriter w = ConfigurationWriter.to(sw).prettyPrint(true).build()) {
                Map<String, Configuration> configs = configurationBuilderHolder.getNamedConfigurationBuilders().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().build()));
                parser.serialize(w, global.build(), configs);
             }
@@ -686,7 +686,7 @@ public class Server implements ServerManagement, AutoCloseable {
       Path home = serverHome.toPath();
       Path root = serverRoot.toPath();
       ProcessBuilder builder = new ProcessBuilder();
-      builder.command("sh", "-c", home.resolve(reportFile).toString(), Long.toString(pid), root.toString());
+      builder.command("sh", "-c", String.format("%s %s %s", home.resolve(reportFile), pid, root));
       return blockingManager.supplyBlocking(() -> {
          try {
             Process process = builder.start();

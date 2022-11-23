@@ -3,6 +3,7 @@ package org.infinispan.server.security.authorization;
 import static org.infinispan.client.rest.RestResponse.ACCEPTED;
 import static org.infinispan.client.rest.RestResponse.CREATED;
 import static org.infinispan.client.rest.RestResponse.FORBIDDEN;
+import static org.infinispan.client.rest.RestResponse.NOT_FOUND;
 import static org.infinispan.client.rest.RestResponse.NOT_MODIFIED;
 import static org.infinispan.client.rest.RestResponse.NO_CONTENT;
 import static org.infinispan.client.rest.RestResponse.OK;
@@ -21,6 +22,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
@@ -31,8 +33,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.infinispan.client.hotrod.RemoteCache;
@@ -45,6 +49,7 @@ import org.infinispan.client.rest.RestCacheManagerClient;
 import org.infinispan.client.rest.RestClient;
 import org.infinispan.client.rest.RestClusterClient;
 import org.infinispan.client.rest.RestResponse;
+import org.infinispan.client.rest.RestServerClient;
 import org.infinispan.client.rest.configuration.RestClientConfiguration;
 import org.infinispan.client.rest.configuration.RestClientConfigurationBuilder;
 import org.infinispan.commons.dataconversion.internal.Json;
@@ -67,6 +72,7 @@ import org.infinispan.server.test.api.TestUser;
 import org.infinispan.server.test.core.ContainerInfinispanServerDriver;
 import org.infinispan.server.test.junit4.InfinispanServerRule;
 import org.infinispan.server.test.junit4.InfinispanServerTestMethodRule;
+import org.infinispan.util.concurrent.CompletionStages;
 import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
@@ -147,6 +153,26 @@ public abstract class AbstractAuthorization {
       for (TestUser type : EnumSet.complementOf(EnumSet.of(TestUser.ANONYMOUS, TestUser.ADMIN, TestUser.MONITOR))) {
          RestCacheClient cache = getServerTest().rest().withClientConfiguration(restBuilders.get(type)).get().cache(getServerTest().getMethodName());
          assertStatus(FORBIDDEN, cache.distribution());
+      }
+   }
+
+   @Test
+   public void testRestKeyDistribution() {
+      restCreateAuthzCache("admin", "observer", "deployer", "application", "writer", "reader", "monitor");
+      RestCacheClient adminCache = getServerTest().rest().withClientConfiguration(restBuilders.get(TestUser.ADMIN)).get().cache(getServerTest().getMethodName());
+      assertStatus(NO_CONTENT, adminCache.put("existentKey", "v"));
+
+      for (TestUser type : EnumSet.of(TestUser.ADMIN, TestUser.MONITOR)) {
+         RestCacheClient cache = getServerTest().rest().withClientConfiguration(restBuilders.get(type)).get().cache(getServerTest().getMethodName());
+         assertStatus(OK, cache.distribution("somekey"));
+         assertStatus(OK, cache.distribution("existentKey"));
+      }
+
+      // Types with no access.
+      for (TestUser type: EnumSet.complementOf(EnumSet.of(TestUser.ANONYMOUS, TestUser.ADMIN, TestUser.MONITOR))) {
+         RestCacheClient cache = getServerTest().rest().withClientConfiguration(restBuilders.get(type)).get().cache(getServerTest().getMethodName());
+         assertStatus(FORBIDDEN, cache.distribution("somekey"));
+         assertStatus(FORBIDDEN, cache.distribution("existentKey"));
       }
    }
 
@@ -647,6 +673,35 @@ public abstract class AbstractAuthorization {
    }
 
    @Test
+   public void testRestServerNodeReport() {
+      if (!(getServers().getServerDriver() instanceof ContainerInfinispanServerDriver)) {
+         throw new AssumptionViolatedException("Requires CONTAINER mode");
+      }
+      RestClusterClient restClient = getServerTest().rest().withClientConfiguration(restBuilders.get(TestUser.ADMIN)).get().cluster();
+      CompletionStage<RestResponse> distribution = restClient.distribution();
+      RestResponse distributionResponse = CompletionStages.join(distribution);
+      assertEquals(OK, distributionResponse.getStatus());
+      Json json = Json.read(distributionResponse.getBody());
+      List<String> nodes = json.asJsonList().stream().map(j -> j.at("node_name").asString()).collect(Collectors.toList());
+
+      RestServerClient client = getServerTest().rest().withClientConfiguration(restBuilders.get(TestUser.ADMIN)).get().server();
+      for (String name : nodes) {
+         RestResponse response = CompletionStages.join(client.report(name));
+         assertEquals(OK, response.getStatus());
+         assertEquals("application/gzip", response.getHeader("content-type"));
+         assertTrue(response.getHeader("Content-Disposition").startsWith("attachment;"));
+      }
+
+      RestResponse response = CompletionStages.join(client.report("not-a-node-name"));
+      assertEquals(NOT_FOUND, response.getStatus());
+
+      for (TestUser user : EnumSet.complementOf(EnumSet.of(TestUser.ANONYMOUS, TestUser.ADMIN))) {
+         RestServerClient otherClient = getServerTest().rest().withClientConfiguration(restBuilders.get(user)).get().server();
+         assertStatus(FORBIDDEN, otherClient.report(getServerTest().getMethodName()));
+      }
+   }
+
+   @Test
    public void testRestAdminsMustAccessBackupsAndRestores() {
       String BACKUP_NAME = "backup";
       RestClusterClient client = getServerTest().rest().withClientConfiguration(restBuilders.get(TestUser.ADMIN)).get().cluster();
@@ -719,6 +774,8 @@ public abstract class AbstractAuthorization {
          RestClientConfiguration cfg = restBuilders.get(user).build();
          boolean followRedirects = !cfg.security().authentication().mechanism().equals("SPNEGO");
          RestClientConfigurationBuilder builder = new RestClientConfigurationBuilder().read(cfg).clearServers().followRedirects(followRedirects);
+         InetSocketAddress serverAddress = getServers().getServerDriver().getServerSocket(0, 11222);
+         builder.addServer().host(serverAddress.getHostName()).port(serverAddress.getPort());
          RestClient client = getServerTest().rest().withClientConfiguration(builder).get();
          assertStatus(followRedirects ? OK : TEMPORARY_REDIRECT, client.raw().get("/rest/v2/login"));
          Json acl = Json.read(assertStatus(OK, client.raw().get("/rest/v2/security/user/acl")));

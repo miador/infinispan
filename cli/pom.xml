@@ -44,14 +44,13 @@
          <optional>true</optional>
       </dependency>
       <dependency>
+         <groupId>io.lettuce</groupId>
+         <artifactId>lettuce-core</artifactId>
+      </dependency>
+      <dependency>
          <groupId>org.infinispan</groupId>
          <artifactId>infinispan-core</artifactId>
          <optional>true</optional> <!-- Configuration converter -->
-      </dependency>
-      <dependency>
-         <groupId>org.yaml</groupId>
-         <artifactId>snakeyaml</artifactId>
-         <scope>compile</scope>
       </dependency>
       <dependency>
          <groupId>org.apache.logging.log4j</groupId>

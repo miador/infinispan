@@ -82,7 +82,6 @@
       <module>core</module>
       <module>core-jakarta</module>
       <module>jboss-marshalling</module>
-      <module>extended-statistics</module>
       <module>counter</module>
       <module>multimap</module>
       <module>tools</module>
@@ -422,7 +421,6 @@
       <versionx.org.wildfly.openssl.wildfly-openssl-windows-x86_64>${version.org.wildfly.openssl.natives.windows_x86_64}</versionx.org.wildfly.openssl.wildfly-openssl-windows-x86_64>
       <versionx.org.wildfly.security.wildfly-elytron>${version.org.wildfly.elytron}</versionx.org.wildfly.security.wildfly-elytron>
       <versionx.org.xerial>3.36.0.1</versionx.org.xerial>
-      <versionx.org.yaml.snakeyaml>1.31</versionx.org.yaml.snakeyaml>
       <versionx.software.amazon.ion.java>1.0.2</versionx.software.amazon.ion.java>
       <versionx.sun.jdk.jconsole>jdk</versionx.sun.jdk.jconsole>
    </properties>
@@ -1975,12 +1973,6 @@
             <scope>test</scope>
          </dependency>
          <dependency>
-            <groupId>org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
-            <version>${versionx.org.yaml.snakeyaml}</version>
-            <scope>test</scope>
-         </dependency>
-         <dependency>
             <groupId>software.amazon.ion</groupId>
             <artifactId>ion-java</artifactId>
             <version>${versionx.software.amazon.ion.java}</version>
@@ -3183,7 +3175,6 @@
                               <source>${dir.ispn}/commons/src/main/java</source>
                               <source>${dir.ispn}/commons-test/src/main/java</source>
                               <source>${dir.ispn}/core/src/main/java</source>
-                              <source>${dir.ispn}/extended-statistics/src/main/java</source>
                               <source>${dir.ispn}/jcache/commons/src/main/java</source>
                               <source>${dir.ispn}/jcache/embedded/src/main/java</source>
                               <source>${dir.ispn}/jcache/remote/src/main/java</source>

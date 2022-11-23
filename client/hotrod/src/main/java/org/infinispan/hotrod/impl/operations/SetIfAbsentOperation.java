@@ -26,11 +26,17 @@ public class SetIfAbsentOperation<K> extends AbstractPutIfAbsentOperation<K, Boo
    }
 
    @Override
-   void completeResponse(ByteBuf buf, short status) {
+   void completeResponseExistent(ByteBuf buf, short status) {
       boolean wasSuccess = HotRodConstants.isSuccess(status);
       if (log.isTraceEnabled()) {
          log.tracef("Returning from setIfAbsent: %s", wasSuccess);
       }
+      statsDataStore();
       complete(wasSuccess);
+   }
+
+   @Override
+   void completeResponseNotExistent(ByteBuf buf, short status) {
+      completeResponseExistent(buf, status);
    }
 }

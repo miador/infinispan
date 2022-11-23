@@ -19,7 +19,7 @@ public interface ConfigurationWriter extends AutoCloseable {
    class Builder {
       private final BufferedWriter writer;
       private MediaType type = MediaType.APPLICATION_XML;
-      private boolean prettyPrint = true;
+      private boolean prettyPrint = false;
       private boolean clearTextSecrets = false;
 
       private Builder(OutputStream os) {
@@ -46,7 +46,7 @@ public interface ConfigurationWriter extends AutoCloseable {
       }
 
       public ConfigurationWriter build() {
-         switch (type.toString()) {
+         switch (type.getTypeSubtype()) {
             case MediaType.APPLICATION_XML_TYPE:
                return new XmlConfigurationWriter(writer, prettyPrint, clearTextSecrets);
             case MediaType.APPLICATION_YAML_TYPE:
